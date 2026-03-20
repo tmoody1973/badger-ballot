@@ -9,9 +9,11 @@ export const CANDIDATE_PHOTOS: Record<string, string> = {
   roys: "/candidates/politics-election-2026-governor-roys-committee-1536x864.jpg",
   hong: "https://upload.wikimedia.org/wikipedia/commons/9/9e/Francesca_Hong_IMG_2500_%281%29.jpg",
   crowley: "https://upload.wikimedia.org/wikipedia/commons/e/e2/David_Crowley.jpg",
+  brennan: "/candidates/joel-brennan.jpg",
+  hughes: "/candidates/headshot_missy_hughes.jpg",
 
   // Governor — Republicans
-  tiffany: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Rep._Tom_Tiffany_-_117th_Congress_%28cropped%29.jpeg/440px-Rep._Tom_Tiffany_-_117th_Congress_%28cropped%29.jpeg",
+  tiffany: "/candidates/Tom_Tiffany.jpg",
 
   // Supreme Court
   taylor: "https://upload.wikimedia.org/wikipedia/commons/a/af/Justice_Chris_Taylor_2026_portrait_%28cropped%29.jpg",
