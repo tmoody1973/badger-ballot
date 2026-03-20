@@ -226,34 +226,6 @@ export const CANDIDATES: readonly Candidate[] = [
     severity: "low",
   },
 
-  // STATE SENATE — Key competitive races
-  {
-    id: "vining",
-    name: "Robyn Vining",
-    party: "D",
-    office: "State Senate SD-5",
-    currentRole: "State Representative",
-    type: "challenger",
-    raceCategory: "senate",
-    photoUrl: photo("vining"),
-    keyFact: "Top D pickup target. Open seat — Rob Hutton (R) retiring. West Allis/Wauwatosa/Brookfield.",
-    findings: 2,
-    severity: "medium",
-  },
-  {
-    id: "spreitzer",
-    name: "Mark Spreitzer",
-    party: "D",
-    office: "State Senate SD-15",
-    currentRole: "State Senator (incumbent)",
-    type: "incumbent",
-    raceCategory: "senate",
-    photoUrl: photo("spreitzer"),
-    keyFact: "Incumbent. Janesville/Beloit area. Lean D district under new maps.",
-    findings: 2,
-    severity: "low",
-  },
-
   // STATEWIDE — Attorney General
   {
     id: "kaul",
@@ -330,7 +302,6 @@ export const RACE_FILTERS = [
   { key: "supreme_court", label: "Supreme Court" },
   { key: "attorney_general", label: "Attorney General" },
   { key: "house", label: "U.S. House" },
-  { key: "senate", label: "State Senate" },
   { key: "ballot", label: "Ballot" },
 ] as const;
 
