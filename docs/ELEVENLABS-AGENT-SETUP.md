@@ -140,56 +140,155 @@ You need 3 server tools. For each one:
 
 ### Server Tool 1: pull_receipts
 
+**Basic settings:**
+
 | Field | Value |
 |-------|-------|
 | **Name** | `pull_receipts` |
-| **Description** | `Search the web for a candidate's voting record, campaign donors, fact checks, endorsements, news coverage, and platform positions. Use this when the user asks about a candidate or says "pull the receipts." Returns structured data that you should narrate and display using client tools.` |
+| **Tool Description** | `Search the web for a candidate's voting record, campaign donors, fact checks, endorsements, news coverage, and platform positions. Use this when the user asks about a candidate or says "pull the receipts." Returns structured data that you should narrate and display using client tools.` |
 | **Method** | POST |
 | **URL** | `https://badger-ballot.vercel.app/api/receipts` |
 
+**Advanced settings:**
+
+| Field | Value |
+|-------|-------|
+| **Response timeout** | 30 seconds |
+| **Disable interruptions** | ✅ Checked |
+| **Pre-tool speech** | Always |
+| **Execution mode** | Immediate |
+| **Tool call sound** | None |
+| **Authentication** | None |
+
 **Body Parameters:**
 
-| Name | Type | Description | Required |
-|------|------|-------------|----------|
-| `candidate` | string | `The candidate's name or ID (e.g., "tiffany", "Tom Tiffany", "barnes")` | Yes |
-| `topic` | string | `Optional topic to focus on (e.g., "public lands", "abortion", "donors")` | No |
+Top Description box (one description for the entire body):
+```
+Search the web for a candidate's voting record, campaign donors, fact checks, endorsements, news coverage, and platform positions. Returns structured findings from Firecrawl search and Claude synthesis.
+```
+
+Then add 2 properties:
+
+**Property 1:**
+
+| Field | Value |
+|-------|-------|
+| **Data type** | String |
+| **Identifier** | `candidate` |
+| **Required** | ✅ Checked |
+| **Value Type** | LLM Prompt |
+| **Description** | `The candidate's name or ID to research. Use IDs when possible: tiffany, barnes, rodriguez, roys, hong, crowley, vanorden, cooke, steil, taylor, lazar, kaul, toney, dei-amend, worship-amend, veto-amend. If the user says "Tom Tiffany", use "tiffany".` |
+| **Enum Values** | Leave empty |
+
+**Property 2:**
+
+| Field | Value |
+|-------|-------|
+| **Data type** | String |
+| **Identifier** | `topic` |
+| **Required** | ❌ Unchecked |
+| **Value Type** | LLM Prompt |
+| **Description** | `The specific topic the user asked about, e.g., "public lands", "abortion", "donors", "education", "Jan 6". Leave empty if no specific topic mentioned.` |
+| **Enum Values** | Leave empty |
+
+---
 
 ### Server Tool 2: deep_dive
+
+**Basic settings:**
 
 | Field | Value |
 |-------|-------|
 | **Name** | `deep_dive` |
-| **Description** | `Do a deeper search on a specific angle about a candidate. Use this when the user says "go deeper" or asks a focused follow-up question. Returns more detailed findings on the specific topic.` |
+| **Tool Description** | `Do a deeper search on a specific angle about a candidate. Use this when the user says "go deeper" or asks a focused follow-up question. Returns more detailed findings on the specific topic.` |
 | **Method** | POST |
 | **URL** | `https://badger-ballot.vercel.app/api/deep-dive` |
 
+**Advanced settings:**
+
+| Field | Value |
+|-------|-------|
+| **Response timeout** | 30 seconds |
+| **Disable interruptions** | ✅ Checked |
+| **Pre-tool speech** | Always |
+| **Execution mode** | Immediate |
+| **Tool call sound** | None |
+| **Authentication** | None |
+
 **Body Parameters:**
 
-| Name | Type | Description | Required |
-|------|------|-------------|----------|
-| `candidate` | string | `The candidate's name or ID` | Yes |
-| `angle` | string | `The specific topic to research (e.g., "campaign donors", "Jan 6 involvement", "education policy")` | Yes |
+Top Description box:
+```
+Do a deeper search on a specific angle about a candidate. Use when the user says "go deeper" or asks a focused follow-up question.
+```
+
+Then add 2 properties:
+
+**Property 1:**
+
+| Field | Value |
+|-------|-------|
+| **Data type** | String |
+| **Identifier** | `candidate` |
+| **Required** | ✅ Checked |
+| **Value Type** | LLM Prompt |
+| **Description** | `The candidate currently being discussed. Use the same ID from the previous pull_receipts call, e.g., "tiffany", "barnes".` |
+| **Enum Values** | Leave empty |
+
+**Property 2:**
+
+| Field | Value |
+|-------|-------|
+| **Data type** | String |
+| **Identifier** | `angle` |
+| **Required** | ✅ Checked |
+| **Value Type** | LLM Prompt |
+| **Description** | `The specific topic to dig deeper on, e.g., "campaign donors", "voting record on abortion", "Jan 6 involvement", "education policy", "fundraising".` |
+| **Enum Values** | Leave empty |
+
+---
 
 ### Server Tool 3: candidate_profile
+
+**Basic settings:**
 
 | Field | Value |
 |-------|-------|
 | **Name** | `candidate_profile` |
-| **Description** | `Get a quick profile of a candidate or list all candidates. Use this for simple "who is" or "who's running" questions before doing a full search.` |
+| **Tool Description** | `Get a quick profile of a candidate or list all candidates. Use this for simple "who is" or "who's running" questions before doing a full search.` |
 | **Method** | POST |
 | **URL** | `https://badger-ballot.vercel.app/api/candidate` |
 
+**Advanced settings:**
+
+| Field | Value |
+|-------|-------|
+| **Response timeout** | 10 seconds |
+| **Disable interruptions** | ❌ Unchecked |
+| **Pre-tool speech** | Auto |
+| **Execution mode** | Immediate |
+| **Tool call sound** | None |
+| **Authentication** | None |
+
 **Body Parameters:**
 
-| Name | Type | Description | Required |
-|------|------|-------------|----------|
-| `candidate` | string | `The candidate's name or ID. Omit to get the full directory.` | No |
+Top Description box:
+```
+Get a quick profile of a candidate or list all candidates. Use for simple "who is" or "who's running" questions.
+```
 
-### Important Settings for All Server Tools:
+Then add 1 property:
 
-- **Do NOT check "Wait for response"** — we want the agent to keep speaking while the tool runs
-- Actually, **DO check "Wait for response"** for `pull_receipts` and `deep_dive` — the agent needs the data back before it can narrate findings. It should say "Let me dig into that..." as filler while waiting.
-- For `candidate_profile`, you can check "Wait for response" — it returns instantly.
+**Property 1:**
+
+| Field | Value |
+|-------|-------|
+| **Data type** | String |
+| **Identifier** | `candidate` |
+| **Required** | ❌ Unchecked |
+| **Value Type** | LLM Prompt |
+| **Description** | `The candidate's name or ID to look up. If the user asks "who's running" or "show me all candidates", leave this empty to get the full directory.` |
+| **Enum Values** | Leave empty |
 
 ---
 
