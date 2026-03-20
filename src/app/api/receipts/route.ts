@@ -11,6 +11,41 @@ interface SearchSnippet {
   description: string;
 }
 
+// Extract article body from markdown, skipping navigation/ads/footers
+function extractArticleBody(markdown: string): string {
+  // Remove common noise patterns
+  let clean = markdown
+    .replace(/!\[.*?\]\(.*?\)/g, "") // Remove images
+    .replace(/\[.*?Skip.*?\]\(.*?\)/g, "") // Skip links
+    .replace(/\[.*?Subscribe.*?\]\(.*?\)/gi, "") // Subscribe CTAs
+    .replace(/\[.*?Newsletter.*?\]\(.*?\)/gi, "") // Newsletter CTAs
+    .replace(/\[.*?Sign up.*?\]\(.*?\)/gi, "") // Sign up CTAs
+    .replace(/#{1,6}\s*(?:Related|Share|Follow|Tags|Categories|Comments|About|Contact)\b[^\n]*/gi, "") // Section headers
+    .replace(/\n{3,}/g, "\n\n") // Collapse multiple newlines
+    .trim();
+
+  // Find the substantive content — look for paragraphs with dollar signs or candidate names
+  const lines = clean.split("\n");
+  const substantiveLines: string[] = [];
+  let foundContent = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Skip short lines (navigation, buttons)
+    if (trimmed.length < 30 && !trimmed.startsWith("#")) continue;
+    // Look for lines with dollar amounts or political content
+    if (/\$[\d,]+|raised|donated|contributed|campaign|candidate|governor|senator|endorsement/i.test(trimmed)) {
+      foundContent = true;
+    }
+    if (foundContent) {
+      substantiveLines.push(trimmed);
+    }
+  }
+
+  const body = substantiveLines.join("\n").slice(0, 4000);
+  return body || clean.slice(0, 3000);
+}
+
 export async function POST(req: Request) {
   try {
     const { candidate, topic } = await req.json();
@@ -55,9 +90,8 @@ export async function POST(req: Request) {
             return {
               title: ("title" in r ? r.title : "") ?? "",
               url: ("url" in r ? r.url : "") ?? "",
-              // Use markdown content (truncated) if available, otherwise snippet
               description: markdown
-                ? markdown.slice(0, 3000)
+                ? extractArticleBody(markdown)
                 : description,
             };
           });
