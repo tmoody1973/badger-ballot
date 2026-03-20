@@ -10,6 +10,7 @@ interface QueryTemplate {
   readonly queries: readonly SearchQuery[];
 }
 
+// Federal incumbents — use Congress.gov + OpenSecrets (federal finance)
 function incumbentQueries(candidate: string, topic?: string): QueryTemplate {
   const t = topic ?? "record";
   return {
@@ -23,15 +24,16 @@ function incumbentQueries(candidate: string, topic?: string): QueryTemplate {
   };
 }
 
+// State-level challengers (governor, AG, etc.) — use WI-specific finance sources
 function challengerQueries(candidate: string, topic?: string): QueryTemplate {
   const t = topic ?? "platform";
   return {
     queries: [
       { query: `${candidate} campaign platform ${t} issues positions Wisconsin 2026`, limit: 5 },
-      { query: `${candidate} fundraising donors raised campaign finance Wisconsin 2026`, limit: 5 },
-      { query: `${candidate} endorsements endorsed by unions organizations Wisconsin`, limit: 5 },
-      { query: `${candidate} Wisconsin 2026 news interview`, limit: 5, tbs: "qdr:y" },
-      { query: `${candidate} ${t} fact check background Wisconsin`, limit: 5 },
+      { query: `${candidate} fundraising donors raised campaign finance Wisconsin 2026 wisdc transparencyusa`, limit: 5 },
+      { query: `${candidate} endorsements endorsed by Wisconsin 2026`, limit: 5 },
+      { query: `${candidate} Wisconsin 2026 governor news Wisconsin Examiner WPR`, limit: 5, tbs: "qdr:y" },
+      { query: `${candidate} ${t} fact check Wisconsin 2026`, limit: 5 },
     ],
   };
 }
@@ -41,10 +43,10 @@ function openSeatQueries(candidate: string, topic?: string): QueryTemplate {
   return {
     queries: [
       { query: `${candidate} background experience ${t} Wisconsin`, limit: 5 },
-      { query: `${candidate} endorsements fundraising Wisconsin 2026`, limit: 5 },
+      { query: `${candidate} fundraising donors campaign finance Wisconsin 2026`, limit: 5 },
       { query: `${candidate} ${t} news coverage Wisconsin 2026`, limit: 5, tbs: "qdr:y" },
       { query: `${candidate} campaign platform positions issues`, limit: 5 },
-      { query: `${candidate} Wisconsin primary election 2026`, limit: 5 },
+      { query: `${candidate} Wisconsin primary election 2026 endorsements`, limit: 5 },
     ],
   };
 }
@@ -93,10 +95,22 @@ export function getQueryTemplates(
   }
 }
 
+// Deep dive queries — different for federal vs state candidates
 export function getDeepDiveQueries(
   name: string,
   angle: string,
 ): readonly SearchQuery[] {
+  // For finance-related angles, target Wisconsin-specific sources
+  const isFinance = /donor|money|fund|pac|contribut|finance|raised/i.test(angle);
+
+  if (isFinance) {
+    return [
+      { query: `${name} campaign finance donors contributions Wisconsin 2026 detailed`, limit: 5 },
+      { query: `${name} fundraising PAC money top donors Wisconsin Examiner wisdc`, limit: 5 },
+      { query: `${name} campaign finance report Wisconsin Ethics Commission 2026`, limit: 5 },
+    ];
+  }
+
   return [
     { query: `${name} ${angle} Wisconsin 2026 detailed analysis`, limit: 5 },
     { query: `${name} ${angle} Wisconsin sources records data`, limit: 5 },
