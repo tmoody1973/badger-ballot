@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Public_Sans, JetBrains_Mono } from "next/font/google";
+import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -35,7 +36,9 @@ export default function RootLayout({
       lang="en"
       className={`${dmSans.variable} ${publicSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="h-full flex flex-col">{children}</body>
+      <body className="h-full flex flex-col">
+        <ConvexClientProvider>{children}</ConvexClientProvider>
+      </body>
     </html>
   );
 }
