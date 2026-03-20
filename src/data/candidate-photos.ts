@@ -23,6 +23,7 @@ export const CANDIDATE_PHOTOS: Record<string, string> = {
 
   // Attorney General
   kaul: "https://upload.wikimedia.org/wikipedia/commons/e/ef/Josh_Kaul-13_-_44610449305_%283x4b%29.jpg",
+  toney: "/candidates/Eric-Toney.jpg",
 
   // U.S. House
   vanorden: "https://upload.wikimedia.org/wikipedia/commons/8/8e/Congressman_dvo_%281%29.jpg",
