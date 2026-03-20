@@ -8,9 +8,9 @@ function incumbentQueries(candidate: string, topic?: string): QueryTemplate {
   const t = topic ?? "record";
   return {
     queries: [
-      `${candidate} voting record ${t} Wisconsin`,
-      `${candidate} ${t} Wisconsin 2026 position statement`,
-      `${candidate} ${t} fact check politifact Wisconsin`,
+      `${candidate} voting record ${t} Wisconsin congress`,
+      `${candidate} campaign donors fundraising opensecrets PAC contributions Wisconsin 2026`,
+      `${candidate} ${t} fact check politifact Wisconsin 2026`,
     ],
   };
 }
@@ -19,9 +19,9 @@ function challengerQueries(candidate: string, topic?: string): QueryTemplate {
   const t = topic ?? "platform";
   return {
     queries: [
-      `${candidate} campaign platform ${t} Wisconsin 2026`,
-      `${candidate} endorsements background Wisconsin`,
-      `${candidate} ${t} news coverage Wisconsin 2026`,
+      `${candidate} campaign platform ${t} endorsements Wisconsin 2026`,
+      `${candidate} fundraising donors raised campaign finance Wisconsin 2026`,
+      `${candidate} ${t} news coverage fact check Wisconsin 2026`,
     ],
   };
 }

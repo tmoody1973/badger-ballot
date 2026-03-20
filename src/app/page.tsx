@@ -8,6 +8,7 @@ import { CandidateDirectory } from "@/components/CandidateDirectory";
 import { ComponentRenderer } from "@/components/ComponentRenderer";
 import { VoiceBar } from "@/components/VoiceBar";
 import { RaceFilter } from "@/components/RaceFilter";
+import { useVoiceAgent } from "@/lib/useVoiceAgent";
 
 interface ReceiptsResponse {
   candidate?: {
@@ -45,6 +46,19 @@ interface ReceiptsResponse {
     context: string;
     sourceUrl?: string;
   }>;
+  platform?: Array<{
+    issue: string;
+    position: string;
+    source: string;
+    sourceUrl?: string;
+  }>;
+  news?: Array<{
+    headline: string;
+    source: string;
+    sourceUrl?: string;
+    date?: string;
+    summary: string;
+  }>;
   summary?: {
     officialSources: number;
     newsSources: number;
@@ -61,10 +75,8 @@ function buildComponentsFromResponse(
 ): RenderedComponent[] {
   const result: RenderedComponent[] = [];
 
-  // Always show candidate card first
   result.push({ type: "candidate", data: candidateData });
 
-  // Add votes
   if (response.votes) {
     for (const vote of response.votes) {
       result.push({
@@ -74,7 +86,6 @@ function buildComponentsFromResponse(
     }
   }
 
-  // Add donors
   if (response.donors && response.donors.donors.length > 0) {
     result.push({
       type: "donors",
@@ -88,7 +99,6 @@ function buildComponentsFromResponse(
     });
   }
 
-  // Add fact checks
   if (response.factChecks) {
     for (const fc of response.factChecks) {
       result.push({
@@ -98,12 +108,29 @@ function buildComponentsFromResponse(
     }
   }
 
-  // Add endorsements
   if (response.endorsements) {
     for (const endorsement of response.endorsements) {
       result.push({
         type: "endorsement",
         data: { ...endorsement, candidate: candidateData.name },
+      });
+    }
+  }
+
+  if (response.platform) {
+    for (const position of response.platform) {
+      result.push({
+        type: "platform",
+        data: { ...position, candidate: candidateData.name },
+      });
+    }
+  }
+
+  if (response.news) {
+    for (const article of response.news) {
+      result.push({
+        type: "news",
+        data: { ...article, candidate: candidateData.name },
       });
     }
   }
@@ -118,6 +145,7 @@ export default function BallotBadger() {
   const [isLoading, setIsLoading] = useState(false);
   const [components, setComponents] = useState<RenderedComponent[]>([]);
   const [statusText, setStatusText] = useState<string | null>(null);
+  const [voiceMode, setVoiceMode] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
@@ -130,17 +158,45 @@ export default function BallotBadger() {
     [selected],
   );
 
+  // Voice agent with client tools
+  const handleComponentAdd = useCallback((component: RenderedComponent) => {
+    setComponents((prev) => [...prev, component]);
+    // Auto-scroll
+    setTimeout(() => {
+      if (mainRef.current) {
+        mainRef.current.scrollTop = mainRef.current.scrollHeight;
+      }
+    }, 100);
+  }, []);
+
+  const handleVoiceStatusChange = useCallback((status: string) => {
+    setStatusText(status);
+  }, []);
+
+  const voiceAgent = useVoiceAgent({
+    onComponentAdd: handleComponentAdd,
+    onStatusChange: handleVoiceStatusChange,
+    selectedCandidate,
+  });
+
   function handleSelect(id: string) {
     setSelected(id);
     setIsActive(false);
     setIsLoading(false);
     setComponents([]);
     setStatusText(null);
+    setVoiceMode(false);
+    // Stop voice session if running
+    if (voiceAgent.isConnected) {
+      voiceAgent.stopVoiceSession();
+    }
   }
 
-  const pullReceipts = useCallback(async (candidate: Candidate) => {
+  // Click-based receipts pull (fallback when voice isn't available)
+  const pullReceiptsClick = useCallback(async (candidate: Candidate) => {
     setIsLoading(true);
     setIsActive(true);
+    setVoiceMode(false);
     setComponents([{ type: "candidate", data: candidate }]);
     setStatusText("Digging into the records...");
 
@@ -159,26 +215,19 @@ export default function BallotBadger() {
         return;
       }
 
-      // Build components from the response
       const newComponents = buildComponentsFromResponse(data, candidate);
 
-      // Stagger the component reveals for visual effect
       setComponents([newComponents[0]]);
-
       for (let i = 1; i < newComponents.length; i++) {
         await new Promise((resolve) => setTimeout(resolve, 600));
         setComponents((prev) => [...prev, newComponents[i]]);
-
-        // Auto-scroll to latest component
         if (mainRef.current) {
           mainRef.current.scrollTop = mainRef.current.scrollHeight;
         }
       }
 
       const sourceCount = data.source_count ?? 0;
-      setStatusText(
-        `Found ${sourceCount} sources. Say "go deeper" or ask a follow-up.`,
-      );
+      setStatusText(`Found ${sourceCount} sources. Say "go deeper" or ask a follow-up.`);
     } catch {
       setStatusText("Search failed. Try again.");
     } finally {
@@ -186,16 +235,39 @@ export default function BallotBadger() {
     }
   }, []);
 
-  function handleToggleVoice() {
+  // Voice-based receipts pull
+  const pullReceiptsVoice = useCallback(async () => {
+    if (!selectedCandidate) return;
+
+    setIsActive(true);
+    setVoiceMode(true);
+    setComponents([{ type: "candidate", data: selectedCandidate }]);
+    setStatusText("Connecting to voice agent...");
+
+    await voiceAgent.startVoiceSession();
+  }, [selectedCandidate, voiceAgent]);
+
+  function handlePullReceipts() {
     if (!selectedCandidate) return;
 
     if (isActive) {
+      // Stop
       setIsActive(false);
       setStatusText(null);
+      setVoiceMode(false);
+      if (voiceAgent.isConnected) {
+        voiceAgent.stopVoiceSession();
+      }
       return;
     }
 
-    pullReceipts(selectedCandidate);
+    // Try voice first, fall back to click
+    pullReceiptsVoice();
+  }
+
+  function handleClickFallback() {
+    if (!selectedCandidate) return;
+    pullReceiptsClick(selectedCandidate);
   }
 
   return (
@@ -210,7 +282,6 @@ export default function BallotBadger() {
 
         <div className="flex-1" />
 
-        {/* Neobrutalism navigation menu as filter bar */}
         <RaceFilter filter={filter} onFilterChange={setFilter} />
       </header>
 
@@ -243,9 +314,13 @@ export default function BallotBadger() {
       <VoiceBar
         isActive={isActive}
         selectedName={selectedCandidate?.name ?? null}
-        onToggle={handleToggleVoice}
+        onToggle={handlePullReceipts}
+        onClickFallback={handleClickFallback}
         statusText={statusText}
         isLoading={isLoading}
+        voiceMode={voiceMode}
+        isSpeaking={voiceAgent.isSpeaking}
+        isConnected={voiceAgent.isConnected}
       />
     </div>
   );

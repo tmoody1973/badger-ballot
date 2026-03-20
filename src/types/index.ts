@@ -105,10 +105,21 @@ export interface ReceiptsResponse {
   };
 }
 
+export interface NewsHeadlineData {
+  readonly headline: string;
+  readonly source: string;
+  readonly sourceUrl?: string;
+  readonly date?: string;
+  readonly summary: string;
+  readonly candidate: string;
+}
+
 export type RenderedComponent =
   | { readonly type: "candidate"; readonly data: Candidate }
   | { readonly type: "vote"; readonly data: VoteData }
   | { readonly type: "donors"; readonly data: DonorTableData }
   | { readonly type: "factCheck"; readonly data: FactCheckData }
   | { readonly type: "endorsement"; readonly data: EndorsementData }
-  | { readonly type: "measure"; readonly data: MeasureData };
+  | { readonly type: "measure"; readonly data: MeasureData }
+  | { readonly type: "news"; readonly data: NewsHeadlineData }
+  | { readonly type: "platform"; readonly data: { issue: string; position: string; source: string; sourceUrl?: string; candidate: string } };
