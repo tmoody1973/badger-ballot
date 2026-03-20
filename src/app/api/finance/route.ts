@@ -30,7 +30,10 @@ export async function POST(req: Request) {
       // Go directly to transactions filtered by candidate name + contributions
       await page.goto('${searchUrl}');
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(4000);
+      // Wait for the dynamic table to render — this is a React app
+      await page.waitForTimeout(6000);
+      // Wait specifically for a table or data rows to appear
+      await page.waitForSelector('table tbody tr, [role="row"]', { timeout: 10000 }).catch(() => {});
 
       // Extract the page content — should have contribution table
       const url = page.url();
