@@ -28,7 +28,14 @@ export async function runBrowserAutomation(
   try {
     // Create a headless browser session
     const session = await kernel.browsers.create();
-    sessionId = (session as unknown as { id: string }).id;
+    // The session object may use different field names
+    const sessionObj = session as unknown as Record<string, unknown>;
+    sessionId = (sessionObj.id ?? sessionObj.session_id ?? sessionObj.browser_id) as string;
+    console.log("[kernel] Browser session created:", JSON.stringify(sessionObj).slice(0, 300));
+
+    if (!sessionId) {
+      throw new Error(`No session ID in response: ${JSON.stringify(sessionObj).slice(0, 200)}`);
+    }
 
     // Execute Playwright code directly in the browser VM
     const response = await kernel.browsers.playwright.execute(
