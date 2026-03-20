@@ -173,9 +173,25 @@ export default function BallotBadger() {
     setStatusText(status);
   }, []);
 
+  const handleVoiceSelectCandidate = useCallback((id: string) => {
+    setSelected(id);
+    setComponents([]);
+  }, []);
+
+  const handleVoiceSetFilter = useCallback((f: string) => {
+    setFilter(f as FilterKey);
+  }, []);
+
+  const handleVoiceClearResults = useCallback(() => {
+    setComponents([]);
+  }, []);
+
   const voiceAgent = useVoiceAgent({
     onComponentAdd: handleComponentAdd,
     onStatusChange: handleVoiceStatusChange,
+    onSelectCandidate: handleVoiceSelectCandidate,
+    onSetFilter: handleVoiceSetFilter,
+    onClearResults: handleVoiceClearResults,
     selectedCandidate,
   });
 

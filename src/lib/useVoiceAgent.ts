@@ -7,12 +7,18 @@ import type { RenderedComponent, Candidate } from "@/types";
 interface UseVoiceAgentOptions {
   onComponentAdd: (component: RenderedComponent) => void;
   onStatusChange: (status: string) => void;
+  onSelectCandidate: (id: string) => void;
+  onSetFilter: (filter: string) => void;
+  onClearResults: () => void;
   selectedCandidate: Candidate | null;
 }
 
 export function useVoiceAgent({
   onComponentAdd,
   onStatusChange,
+  onSelectCandidate,
+  onSetFilter,
+  onClearResults,
   selectedCandidate,
 }: UseVoiceAgentOptions) {
   const [isConnected, setIsConnected] = useState(false);
@@ -170,6 +176,22 @@ export function useVoiceAgent({
         });
         return "displayed";
       },
+
+      // Navigation client tools — agent controls the UI
+      select_candidate: (params: { candidate_id: string }) => {
+        onSelectCandidate(params.candidate_id);
+        return `Selected candidate ${params.candidate_id}`;
+      },
+
+      set_filter: (params: { filter: string }) => {
+        onSetFilter(params.filter);
+        return `Filter set to ${params.filter}`;
+      },
+
+      clear_results: () => {
+        onClearResults();
+        return "Results cleared";
+      },
     },
   });
 
@@ -177,8 +199,13 @@ export function useVoiceAgent({
     if (!selectedCandidate) return;
 
     try {
-      // Request microphone permission
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Request microphone permission (requires HTTPS or localhost)
+      if (navigator.mediaDevices?.getUserMedia) {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } else {
+        onStatusChange("Microphone not available (requires HTTPS). Using search mode.");
+        return;
+      }
 
       // Get signed URL for secure connection
       const res = await fetch("/api/eleven-signed-url");
