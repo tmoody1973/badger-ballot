@@ -1,0 +1,109 @@
+export type Party = "D" | "R" | "M" | "X" | "NP";
+
+export type CandidateType =
+  | "incumbent"
+  | "challenger"
+  | "open_seat"
+  | "measure"
+  | "district";
+
+export type Severity = "high" | "medium" | "low";
+
+export type RaceCategory =
+  | "governor"
+  | "house"
+  | "senate"
+  | "supreme_court"
+  | "statewide"
+  | "ballot";
+
+export interface Candidate {
+  readonly id: string;
+  readonly name: string;
+  readonly party: Party;
+  readonly office: string;
+  readonly currentRole: string;
+  readonly type: CandidateType;
+  readonly raceCategory: RaceCategory;
+  readonly photoUrl: string | null;
+  readonly keyFact: string;
+  readonly findings: number;
+  readonly severity: Severity;
+}
+
+export interface VoteData {
+  readonly bill: string;
+  readonly vote: string;
+  readonly context: string;
+  readonly date?: string;
+  readonly source: string;
+  readonly candidate: string;
+}
+
+export interface DonorData {
+  readonly name: string;
+  readonly amount: string;
+  readonly type: string;
+  readonly cycle: string;
+}
+
+export interface DonorTableData {
+  readonly candidate: string;
+  readonly donors: readonly DonorData[];
+  readonly totalRaised?: string;
+  readonly source: string;
+}
+
+export interface FactCheckData {
+  readonly claim: string;
+  readonly rating: string;
+  readonly source: string;
+  readonly year: string;
+  readonly candidate: string;
+}
+
+export interface EndorsementData {
+  readonly endorser: string;
+  readonly type: string;
+  readonly context: string;
+  readonly candidate: string;
+}
+
+export interface MeasureData {
+  readonly title: string;
+  readonly summary: string;
+  readonly forArguments: readonly string[];
+  readonly againstArguments: readonly string[];
+  readonly sponsors?: string;
+  readonly funding?: string;
+}
+
+export interface ReceiptsResponse {
+  readonly candidate: {
+    readonly name: string;
+    readonly party: string;
+    readonly office: string;
+    readonly currentRole: string;
+    readonly keyFact: string;
+    readonly type: CandidateType;
+  };
+  readonly votes: readonly VoteData[];
+  readonly donors: DonorTableData | null;
+  readonly factChecks: readonly FactCheckData[];
+  readonly endorsements: readonly EndorsementData[];
+  readonly platform: readonly { issue: string; position: string; source: string }[];
+  readonly summary: {
+    readonly officialSources: number;
+    readonly newsSources: number;
+    readonly factCheckSources: number;
+    readonly keyFinding: string;
+  };
+}
+
+export type RenderedComponent =
+  | { readonly type: "candidate"; readonly data: Candidate }
+  | { readonly type: "vote"; readonly data: VoteData }
+  | { readonly type: "donors"; readonly data: DonorTableData }
+  | { readonly type: "factCheck"; readonly data: FactCheckData }
+  | { readonly type: "endorsement"; readonly data: EndorsementData }
+  | { readonly type: "measure"; readonly data: MeasureData };
