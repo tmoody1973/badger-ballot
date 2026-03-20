@@ -91,33 +91,36 @@ export async function POST(req: Request) {
       };
       sourceUrl = result?.url ?? "";
 
-      // Step 2: Firecrawl scrapes the kernel-navigated page for clean data
-      if (sourceUrl && sourceUrl !== "about:blank") {
-        try {
-          const firecrawl = getFirecrawl();
-          const scrapeResult = await firecrawl.scrape(sourceUrl, {
-            formats: ["markdown"],
-          });
-          firecrawlContent = scrapeResult.markdown?.slice(0, 5000) ?? "";
-        } catch {
-          // Firecrawl scrape failed — use kernel's text extraction
-          // Combine all extracted data
-          const parts = [
-            result?.stats ? `STATS:\n${result.stats}` : "",
-            result?.topDonors ? `TOP DONORS:\n${result.topDonors}` : "",
-            result?.tableData ? `TRANSACTIONS:\n${result.tableData}` : "",
-            result?.textPreview || "",
-          ].filter(Boolean);
-          firecrawlContent = parts.join("\n\n---\n\n");
-        }
+      // Step 2: Use kernel's extracted data (the site is a JS app — Firecrawl can't re-scrape it)
+      // kernel.sh already rendered the JavaScript, so its text extraction is the source of truth
+      const parts = [
+        result?.stats ? `STATS:\n${result.stats}` : "",
+        result?.topDonors ? `TOP DONORS:\n${result.topDonors}` : "",
+        result?.tableData ? `TRANSACTIONS:\n${result.tableData}` : "",
+      ].filter(Boolean);
+
+      if (parts.length > 0) {
+        firecrawlContent = `Source: Wisconsin Ethics Commission (campaignfinance.wi.gov)\nCandidate: ${candidateName}\n\n${parts.join("\n\n---\n\n")}`;
       } else {
-        const parts = [
-          result?.stats ? `STATS:\n${result.stats}` : "",
-          result?.topDonors ? `TOP DONORS:\n${result.topDonors}` : "",
-          result?.tableData ? `TRANSACTIONS:\n${result.tableData}` : "",
-          result?.textPreview || "",
-        ].filter(Boolean);
-        firecrawlContent = parts.join("\n\n---\n\n");
+        // kernel rendered the page but no structured data found
+        // Fall back to Firecrawl search for news articles about this candidate's finance
+        firecrawlContent = result?.textPreview || "";
+
+        if (firecrawlContent.length < 500) {
+          const firecrawl = getFirecrawl();
+          const searchResult = await firecrawl.search(
+            `"${candidateName}" campaign finance donors Wisconsin 2026`,
+            { limit: 3, scrapeOptions: { formats: ["markdown"] } },
+          );
+          const webResults = searchResult.web ?? [];
+          firecrawlContent = webResults
+            .map((r) => {
+              const md = "markdown" in r ? (r.markdown as string) : "";
+              const desc = ("description" in r ? r.description : "") ?? "";
+              return md ? md.slice(0, 2000) : desc;
+            })
+            .join("\n\n---\n\n");
+        }
       }
     } else {
       // kernel.sh failed — fall back to Firecrawl search + scrape
