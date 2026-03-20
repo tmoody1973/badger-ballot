@@ -30,7 +30,7 @@ function challengerQueries(candidate: string, topic?: string): QueryTemplate {
   return {
     queries: [
       { query: `${candidate} campaign platform ${t} issues positions Wisconsin 2026`, limit: 5 },
-      { query: `${candidate} fundraising donors raised campaign finance Wisconsin 2026 wisdc transparencyusa`, limit: 5 },
+      { query: `"${candidate}" fundraising raised donors "$" Wisconsin 2026 governor`, limit: 5 },
       { query: `${candidate} endorsements endorsed by Wisconsin 2026`, limit: 5 },
       { query: `${candidate} Wisconsin 2026 governor news Wisconsin Examiner WPR`, limit: 5, tbs: "qdr:y" },
       { query: `${candidate} ${t} fact check Wisconsin 2026`, limit: 5 },
