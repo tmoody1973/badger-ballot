@@ -19,6 +19,7 @@ export const CANDIDATE_PHOTOS: Record<string, string> = {
 
   // Supreme Court
   taylor: "https://upload.wikimedia.org/wikipedia/commons/a/af/Justice_Chris_Taylor_2026_portrait_%28cropped%29.jpg",
+  lazar: "/candidates/Maria-Lazar.webp",
 
   // Attorney General
   kaul: "https://upload.wikimedia.org/wikipedia/commons/e/ef/Josh_Kaul-13_-_44610449305_%283x4b%29.jpg",
@@ -26,6 +27,7 @@ export const CANDIDATE_PHOTOS: Record<string, string> = {
   // U.S. House
   vanorden: "https://upload.wikimedia.org/wikipedia/commons/8/8e/Congressman_dvo_%281%29.jpg",
   cooke: "/candidates/rebecca_cooke.JPG",
+  felzkowski: "/candidates/mary-felzkowski.jpg",
   steil: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Steil_Headshot.jpg",
   pfaff: "https://upload.wikimedia.org/wikipedia/commons/0/00/Sen._Brad_Pfaff_2021_%28cropped%29.jpg",
 };
