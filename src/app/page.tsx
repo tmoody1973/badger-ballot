@@ -9,6 +9,7 @@ import { ComponentRenderer } from "@/components/ComponentRenderer";
 import { VoiceBar } from "@/components/VoiceBar";
 import { RaceFilter } from "@/components/RaceFilter";
 import { DiggingProgress } from "@/components/DiggingProgress";
+import { VoiceActiveState } from "@/components/VoiceActiveState";
 import { useVoiceAgent } from "@/lib/useVoiceAgent";
 
 interface ReceiptsResponse {
@@ -174,9 +175,42 @@ export default function BallotBadger() {
     setStatusText(status);
   }, []);
 
-  const handleVoiceSelectCandidate = useCallback((id: string) => {
+  const handleVoiceSelectCandidate = useCallback(async (id: string) => {
     setSelected(id);
     setComponents([]);
+
+    // When voice agent selects a candidate, auto-trigger the search
+    const candidate = CANDIDATES.find((c) => c.id === id);
+    if (!candidate) return;
+
+    setIsLoading(true);
+    setComponents([{ type: "candidate", data: candidate }]);
+
+    try {
+      const response = await fetch("/api/receipts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidate: id }),
+      });
+      const data: ReceiptsResponse = await response.json();
+      if (!data.error) {
+        const newComponents = buildComponentsFromResponse(data, candidate);
+        setComponents([newComponents[0]]);
+        for (let i = 1; i < newComponents.length; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 600));
+          setComponents((prev) => [...prev, newComponents[i]]);
+          if (mainRef.current) {
+            mainRef.current.scrollTop = mainRef.current.scrollHeight;
+          }
+        }
+        const sourceCount = data.source_count ?? 0;
+        setStatusText(`Found ${sourceCount} sources. Say "go deeper" or ask a follow-up.`);
+      }
+    } catch {
+      // Search failed but voice is still running
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const handleVoiceSetFilter = useCallback((f: string) => {
@@ -371,6 +405,14 @@ export default function BallotBadger() {
 
         {/* Right: component render area */}
         <main ref={mainRef} className="flex-1 overflow-y-auto">
+          {/* Voice active but no components yet — show listening state */}
+          {voiceMode && isActive && !isLoading && components.length === 0 && (
+            <VoiceActiveState
+              isConnected={voiceAgent.isConnected}
+              isSpeaking={voiceAgent.isSpeaking}
+            />
+          )}
+          {/* Digging progress while search is running */}
           {isLoading && components.length <= 1 && selectedCandidate && (
             <div className="p-5 max-w-3xl mx-auto">
               <DiggingProgress

@@ -38,7 +38,10 @@ export function useVoiceAgent({
       onStatusChange("Voice error. Try again.");
     },
     onMessage: (message) => {
-      console.log("Agent message:", message);
+      console.log("Agent message:", JSON.stringify(message).slice(0, 200));
+    },
+    onUnhandledClientToolCall: (toolCall) => {
+      console.warn("Unhandled client tool call:", JSON.stringify(toolCall));
     },
     clientTools: {
       // Non-blocking client tools that render UI components
