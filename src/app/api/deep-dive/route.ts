@@ -32,6 +32,9 @@ export async function POST(req: Request) {
     const queries = getDeepDiveQueries(candidateName, angle);
     const firecrawl = getFirecrawl();
 
+    // Detect if this is a finance-related deep dive
+    const isFinance = /donor|money|fund|pac|contribut|finance|raised/i.test(angle);
+
     const allResults = await Promise.all(
       queries.map(async (sq) => {
         try {
@@ -39,13 +42,23 @@ export async function POST(req: Request) {
           if (sq.tbs) {
             options.tbs = sq.tbs;
           }
+          // For finance deep dives, get full article content
+          if (isFinance) {
+            options.scrapeOptions = { formats: ["markdown"] };
+          }
           const result = await firecrawl.search(sq.query, options);
           const webResults = result.web ?? [];
-          return webResults.map((r): SearchSnippet => ({
-            title: ("title" in r ? r.title : "") ?? "",
-            url: ("url" in r ? r.url : "") ?? "",
-            description: ("description" in r ? r.description : "") ?? "",
-          }));
+          return webResults.map((r): SearchSnippet => {
+            const markdown = "markdown" in r ? (r.markdown as string) : "";
+            const description = ("description" in r ? r.description : "") ?? "";
+            return {
+              title: ("title" in r ? r.title : "") ?? "",
+              url: ("url" in r ? r.url : "") ?? "",
+              description: markdown
+                ? markdown.slice(0, 3000)
+                : description,
+            };
+          });
         } catch (err) {
           console.error(`Firecrawl deep-dive error for "${sq.query}":`, err instanceof Error ? err.message : err);
           return [];

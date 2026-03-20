@@ -35,20 +35,32 @@ export async function POST(req: Request) {
     const firecrawl = getFirecrawl();
 
     // Run all searches in parallel with per-query limits and tbs
+    // Second query (index 1) is always the finance query — use scrapeOptions for full content
     const allResults = await Promise.all(
-      templates.queries.map(async (sq) => {
+      templates.queries.map(async (sq, index) => {
         try {
           const options: Record<string, unknown> = { limit: sq.limit };
           if (sq.tbs) {
             options.tbs = sq.tbs;
           }
+          // For the finance query (index 1), get full markdown content
+          if (index === 1) {
+            options.scrapeOptions = { formats: ["markdown"] };
+          }
           const result = await firecrawl.search(sq.query, options);
           const webResults = result.web ?? [];
-          return webResults.map((r): SearchSnippet => ({
-            title: ("title" in r ? r.title : "") ?? "",
-            url: ("url" in r ? r.url : "") ?? "",
-            description: ("description" in r ? r.description : "") ?? "",
-          }));
+          return webResults.map((r): SearchSnippet => {
+            const markdown = "markdown" in r ? (r.markdown as string) : "";
+            const description = ("description" in r ? r.description : "") ?? "";
+            return {
+              title: ("title" in r ? r.title : "") ?? "",
+              url: ("url" in r ? r.url : "") ?? "",
+              // Use markdown content (truncated) if available, otherwise snippet
+              description: markdown
+                ? markdown.slice(0, 3000)
+                : description,
+            };
+          });
         } catch (err) {
           console.error(`Firecrawl error for "${sq.query}":`, err instanceof Error ? err.message : err);
           return [];
