@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { CANDIDATES, RACE_FILTERS } from "@/data/candidates";
+import { CANDIDATES } from "@/data/candidates";
 import type { FilterKey } from "@/data/candidates";
 import type { RenderedComponent } from "@/types";
 import { CandidateDirectory } from "@/components/CandidateDirectory";
 import { ComponentRenderer } from "@/components/ComponentRenderer";
 import { VoiceBar } from "@/components/VoiceBar";
+import { RaceFilter } from "@/components/RaceFilter";
 
 export default function BallotBadger() {
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -61,23 +62,8 @@ export default function BallotBadger() {
 
         <div className="flex-1" />
 
-        {/* Filters */}
-        <nav className="flex gap-1">
-          {RACE_FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className="rounded-base border-2 border-border px-3.5 py-1.5 text-xs font-heading font-mono transition-all duration-150"
-              style={{
-                backgroundColor: filter === f.key ? "var(--wi-blue)" : "var(--secondary-background)",
-                color: filter === f.key ? "#FFFFFF" : "var(--foreground)",
-                boxShadow: filter === f.key ? "2px 2px 0px 0px var(--border)" : "none",
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
-        </nav>
+        {/* Neobrutalism navigation menu as filter bar */}
+        <RaceFilter filter={filter} onFilterChange={setFilter} />
       </header>
 
       {/* Main split */}
