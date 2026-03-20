@@ -226,6 +226,107 @@ export const CANDIDATES: readonly Candidate[] = [
     severity: "low",
   },
 
+  // STATE SENATE — Competitive battleground districts
+
+  // SD-5: Open seat (Hutton retiring), Waukesha suburbs
+  {
+    id: "vining",
+    name: "Robyn Vining",
+    party: "D",
+    office: "State Senate SD-5",
+    currentRole: "State Assembly member",
+    type: "challenger",
+    raceCategory: "senate",
+    photoUrl: photo("vining"),
+    keyFact: "Open seat — Hutton (R) retiring. Top D pickup target. Wauwatosa.",
+    findings: 2,
+    severity: "medium",
+  },
+  {
+    id: "roberts",
+    name: "Mike Roberts",
+    party: "R",
+    office: "State Senate SD-5",
+    currentRole: "Small business owner",
+    type: "challenger",
+    raceCategory: "senate",
+    photoUrl: photo("roberts"),
+    keyFact: "Pewaukee area. Likely uncontested in GOP primary.",
+    findings: 1,
+    severity: "low",
+  },
+
+  // SD-17: Marklein (R incumbent) vs multi-candidate D primary
+  {
+    id: "marklein",
+    name: "Howard Marklein",
+    party: "R",
+    office: "State Senate SD-17",
+    currentRole: "State Senator (incumbent)",
+    type: "incumbent",
+    raceCategory: "senate",
+    photoUrl: photo("marklein"),
+    keyFact: "Incumbent. Spring Green. Dane-Green-Grant area.",
+    findings: 2,
+    severity: "medium",
+  },
+  {
+    id: "jacobson",
+    name: "Jenna Jacobson",
+    party: "D",
+    office: "State Senate SD-17",
+    currentRole: "State Assembly member",
+    type: "challenger",
+    raceCategory: "senate",
+    photoUrl: photo("jacobson"),
+    keyFact: "Oregon/Dane County. Multi-candidate D primary.",
+    findings: 2,
+    severity: "medium",
+  },
+
+  // SD-21: Open seat (Wanggaard retiring), Racine
+  {
+    id: "jung",
+    name: "Trevor Jung",
+    party: "D",
+    office: "State Senate SD-21",
+    currentRole: "Racine transit manager",
+    type: "challenger",
+    raceCategory: "senate",
+    photoUrl: photo("jung"),
+    keyFact: "Open seat — Wanggaard (R) retiring. Racine. D frontrunner.",
+    findings: 2,
+    severity: "medium",
+  },
+
+  // SD-31: Incumbent vs incumbent (redistricting collision)
+  {
+    id: "smith-jeff",
+    name: "Jeff Smith",
+    party: "D",
+    office: "State Senate SD-31",
+    currentRole: "State Senator (incumbent)",
+    type: "incumbent",
+    raceCategory: "senate",
+    photoUrl: photo("smith-jeff"),
+    keyFact: "Incumbent vs incumbent. Eau Claire area. Swing seat.",
+    findings: 3,
+    severity: "high",
+  },
+  {
+    id: "james",
+    name: "Jesse James",
+    party: "R",
+    office: "State Senate SD-31",
+    currentRole: "State Senator (incumbent from old SD-23)",
+    type: "incumbent",
+    raceCategory: "senate",
+    photoUrl: photo("james"),
+    keyFact: "Incumbent vs incumbent collision from redistricting. Altoona.",
+    findings: 3,
+    severity: "high",
+  },
+
   // STATEWIDE — Attorney General
   {
     id: "kaul",
@@ -302,6 +403,7 @@ export const RACE_FILTERS = [
   { key: "supreme_court", label: "Supreme Court" },
   { key: "attorney_general", label: "Attorney General" },
   { key: "house", label: "U.S. House" },
+  { key: "senate", label: "State Senate" },
   { key: "ballot", label: "Ballot" },
 ] as const;
 
