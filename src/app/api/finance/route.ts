@@ -22,67 +22,77 @@ export async function POST(req: Request) {
     const candidateName = candidateData?.name ?? candidate;
 
     // Step 1: kernel.sh navigates the WI Campaign Finance site
+    // Strategy: Go to registrants page → search candidate name → click their profile → get contributions
+    const escapedName = candidateName.replace(/'/g, "\\'");
+    // Use last name for more reliable search
+    const lastName = candidateName.split(" ").pop()?.replace(/'/g, "\\'") ?? escapedName;
+
     const playwrightCode = `
-      // Navigate to WI Campaign Finance search
-      await page.goto('https://campaignfinance.wi.gov/browse-data');
+      // Navigate to registrants search page
+      await page.goto('https://campaignfinance.wi.gov/browse-data/registrants');
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(2000);
 
-      // Look for search input and type candidate name
-      const searchSelectors = [
-        'input[type="search"]',
-        'input[type="text"]',
-        'input[placeholder*="search" i]',
-        'input[placeholder*="name" i]',
-        'input[aria-label*="search" i]',
-      ];
+      // Find the search input — "Search by Registrant name, Candidate name, Treasurer..."
+      const searchInput = page.locator('input[placeholder*="Search by"], input[type="search"], input[type="text"]').last();
+      await searchInput.waitFor({ state: 'visible', timeout: 5000 });
+      await searchInput.click();
+      await searchInput.fill('${lastName}');
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(3000);
 
-      let searched = false;
-      for (const sel of searchSelectors) {
-        const input = page.locator(sel).first();
-        if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await input.fill('${candidateName.replace(/'/g, "\\'")}');
-          await page.keyboard.press('Enter');
-          searched = true;
+      // Look for the candidate in the results table
+      const rows = page.locator('table tbody tr, [role="row"]');
+      const rowCount = await rows.count();
+
+      let candidateUrl = '';
+      let candidateInfo = '';
+
+      // Find the row containing our candidate's name and click the link
+      for (let i = 0; i < Math.min(rowCount, 20); i++) {
+        const rowText = await rows.nth(i).textContent() || '';
+        if (rowText.toLowerCase().includes('${lastName.toLowerCase()}')) {
+          candidateInfo = rowText.slice(0, 500);
+
+          // Try to find a clickable link in this row
+          const link = rows.nth(i).locator('a').first();
+          if (await link.isVisible({ timeout: 1000 }).catch(() => false)) {
+            const href = await link.getAttribute('href');
+            if (href) {
+              candidateUrl = href.startsWith('http') ? href : 'https://campaignfinance.wi.gov' + href;
+              await link.click();
+              await page.waitForTimeout(3000);
+              break;
+            }
+          }
           break;
         }
       }
 
-      if (!searched) {
-        // Try clicking any search button/link first
-        const searchLink = page.locator('a:has-text("Search"), button:has-text("Search")').first();
-        if (await searchLink.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await searchLink.click();
-          await page.waitForTimeout(2000);
-          // Try again
-          const input = page.locator('input[type="text"], input[type="search"]').first();
-          if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await input.fill('${candidateName.replace(/'/g, "\\'")}');
-            await page.keyboard.press('Enter');
-            searched = true;
+      // Get the final page URL and content
+      const finalUrl = page.url();
+      const bodyText = await page.locator('body').textContent() || '';
+
+      // Try to extract table data if present
+      const tables = await page.locator('table').count();
+      let tableData = '';
+      if (tables > 0) {
+        for (let t = 0; t < Math.min(tables, 3); t++) {
+          const tbl = await page.locator('table').nth(t).textContent() || '';
+          if (tbl.includes('$') || tbl.includes('Contribution') || tbl.includes('Amount')) {
+            tableData += tbl.slice(0, 2000) + '\\n---\\n';
           }
         }
       }
 
-      await page.waitForTimeout(3000);
-
-      // Get results page URL and visible text
-      const url = page.url();
-      const bodyText = await page.locator('body').textContent();
-
-      // Try to find any results table or data
-      const tables = await page.locator('table').count();
-      let tableData = '';
-      if (tables > 0) {
-        tableData = await page.locator('table').first().textContent() || '';
-      }
-
       return {
-        url,
-        searched,
+        url: finalUrl,
+        candidateUrl,
+        candidateInfo,
+        rowCount,
         hasTable: tables > 0,
-        textPreview: bodyText?.slice(0, 3000) ?? '',
-        tableData: tableData.slice(0, 2000),
+        tableData: tableData.slice(0, 3000),
+        textPreview: bodyText.slice(0, 3000),
       };
     `;
 
