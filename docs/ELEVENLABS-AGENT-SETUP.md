@@ -113,22 +113,20 @@ Select **Claude Sonnet** or whichever LLM is available. If you can choose, prefe
 2. Click **"Add Document"**
 3. Upload these files from your project (create them from the existing KB draft):
 
-### Document 1: Election Dates
-- **Name:** `Wisconsin Election Dates 2026`
-- **Type:** Text or upload `background-docs/elevenlabs-kb.md`
-- This covers: Spring election April 7, partisan primary August 11, general November 3, voter deadlines
+### Document 1: Election Dates & Voting Rules
+- **Name:** `Wisconsin Election Dates & Voting Rules`
+- **File:** Upload `knowledge-base/kb-election-dates-and-voting.md`
+- Covers: Election dates, voter eligibility, registration, voter ID, how to vote
 
 ### Document 2: Candidate Directory
 - **Name:** `Wisconsin 2026 Candidate Directory`
-- **Content:** Upload a text file with all candidates, their party, office, current role, and key facts. You can export from `src/data/candidates.ts`.
+- **File:** Upload `knowledge-base/kb-candidates-directory.md`
+- Covers: All 23 candidates with party, office, current role, key facts, race context
 
 ### Document 3: Ballot Measures
 - **Name:** `Wisconsin 2026 Ballot Measures`
-- **Content:** The three certified constitutional amendments (Anti-DEI, Worship Closure, Partial Veto) with full text summaries.
-
-### Document 4: Voting Rules
-- **Name:** `Wisconsin Voting Rules`
-- **Content:** Voter eligibility, registration methods, photo ID requirements, early voting. From the KB draft.
+- **File:** Upload `knowledge-base/kb-ballot-measures.md`
+- Covers: All 3 certified amendments with verified official ballot question text + local referenda
 
 All documents should be set to **Auto** retrieval mode (not Prompt mode).
 
@@ -147,7 +145,7 @@ You need 3 server tools. For each one:
 | **Name** | `pull_receipts` |
 | **Description** | `Search the web for a candidate's voting record, campaign donors, fact checks, endorsements, news coverage, and platform positions. Use this when the user asks about a candidate or says "pull the receipts." Returns structured data that you should narrate and display using client tools.` |
 | **Method** | POST |
-| **URL** | `https://YOUR-VERCEL-URL.vercel.app/api/receipts` |
+| **URL** | `https://badger-ballot.vercel.app/api/receipts` |
 
 **Body Parameters:**
 
@@ -163,7 +161,7 @@ You need 3 server tools. For each one:
 | **Name** | `deep_dive` |
 | **Description** | `Do a deeper search on a specific angle about a candidate. Use this when the user says "go deeper" or asks a focused follow-up question. Returns more detailed findings on the specific topic.` |
 | **Method** | POST |
-| **URL** | `https://YOUR-VERCEL-URL.vercel.app/api/deep-dive` |
+| **URL** | `https://badger-ballot.vercel.app/api/deep-dive` |
 
 **Body Parameters:**
 
@@ -179,7 +177,7 @@ You need 3 server tools. For each one:
 | **Name** | `candidate_profile` |
 | **Description** | `Get a quick profile of a candidate or list all candidates. Use this for simple "who is" or "who's running" questions before doing a full search.` |
 | **Method** | POST |
-| **URL** | `https://YOUR-VERCEL-URL.vercel.app/api/candidate` |
+| **URL** | `https://badger-ballot.vercel.app/api/candidate` |
 
 **Body Parameters:**
 
