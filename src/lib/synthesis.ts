@@ -2,6 +2,39 @@ import Anthropic from "@anthropic-ai/sdk";
 
 let anthropicInstance: Anthropic | null = null;
 
+function extractJSON(text: string): Record<string, unknown> {
+  // Try direct parse first
+  try {
+    return JSON.parse(text.trim());
+  } catch {
+    // ignore
+  }
+
+  // Try extracting from markdown code blocks
+  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (codeBlockMatch) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim());
+    } catch {
+      // ignore
+    }
+  }
+
+  // Try finding JSON object in the text (first { to last })
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(text.slice(firstBrace, lastBrace + 1));
+    } catch {
+      // ignore
+    }
+  }
+
+  console.error("Failed to extract JSON from synthesis response:", text.slice(0, 200));
+  return {};
+}
+
 function getAnthropic(): Anthropic {
   if (!anthropicInstance) {
     anthropicInstance = new Anthropic();
@@ -78,7 +111,7 @@ export async function synthesizeReceipts(
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
-    max_tokens: 1500,
+    max_tokens: 4000,
     system: SYNTHESIS_SYSTEM_PROMPT,
     messages: [
       {
@@ -91,12 +124,7 @@ export async function synthesizeReceipts(
   const text =
     response.content[0].type === "text" ? response.content[0].text : "{}";
 
-  // Extract JSON from the response (handle markdown code blocks)
-  const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) ??
-    text.match(/```\s*([\s\S]*?)\s*```/);
-  const jsonStr = jsonMatch ? jsonMatch[1] : text;
-
-  return JSON.parse(jsonStr.trim());
+  return extractJSON(text);
 }
 
 const DEEP_DIVE_SYSTEM_PROMPT = `You are a nonpartisan civic research analyst for Wisconsin 2026 elections.
@@ -116,7 +144,7 @@ export async function synthesizeDeepDive(
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
-    max_tokens: 2000,
+    max_tokens: 4000,
     system: DEEP_DIVE_SYSTEM_PROMPT,
     messages: [
       {
@@ -129,9 +157,5 @@ export async function synthesizeDeepDive(
   const text =
     response.content[0].type === "text" ? response.content[0].text : "{}";
 
-  const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) ??
-    text.match(/```\s*([\s\S]*?)\s*```/);
-  const jsonStr = jsonMatch ? jsonMatch[1] : text;
-
-  return JSON.parse(jsonStr.trim());
+  return extractJSON(text);
 }
