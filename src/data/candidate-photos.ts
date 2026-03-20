@@ -31,4 +31,13 @@ export const CANDIDATE_PHOTOS: Record<string, string> = {
   felzkowski: "/candidates/mary-felzkowski.jpg",
   steil: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Steil_Headshot.jpg",
   pfaff: "https://upload.wikimedia.org/wikipedia/commons/0/00/Sen._Brad_Pfaff_2021_%28cropped%29.jpg",
+
+  // State Senate
+  vining: "/candidates/Robyn-Vining.jpg",
+  roberts: "/candidates/mike-roberts.png",
+  marklein: "/candidates/howard-marklein.jpg",
+  jacobson: "/candidates/jenna-jacobson.jpg",
+  jung: "/candidates/trevor-jung.webp",
+  "smith-jeff": "/candidates/jeff-smith.jpg",
+  james: "/candidates/jesse-james.jpg",
 };
