@@ -3,6 +3,7 @@
 import { useConversation } from "@elevenlabs/react";
 import { useCallback, useState } from "react";
 import type { RenderedComponent, Candidate } from "@/types";
+import { CANDIDATES } from "@/data/candidates";
 
 interface UseVoiceAgentOptions {
   onComponentAdd: (component: RenderedComponent) => void;
@@ -50,22 +51,34 @@ export function useVoiceAgent({
         findingsCount?: number;
         severity?: string;
       }) => {
-        onComponentAdd({
-          type: "candidate",
-          data: {
-            id: params.name.toLowerCase().replace(/\s+/g, "-"),
-            name: params.name,
-            party: (params.party?.charAt(0).toUpperCase() ?? "D") as "D" | "R" | "M" | "X" | "NP",
-            office: params.office ?? "",
-            currentRole: params.currentRole ?? "",
-            type: "challenger",
-            raceCategory: "governor",
-            photoUrl: selectedCandidate?.photoUrl ?? null,
-            keyFact: params.keyFact ?? "",
-            findings: params.findingsCount ?? 0,
-            severity: (params.severity as "high" | "medium" | "low") ?? "medium",
-          },
-        });
+        // Try to match against our local directory for consistent naming
+        const match = CANDIDATES.find(
+          (c) =>
+            c.name.toLowerCase() === params.name?.toLowerCase() ||
+            c.id === params.name?.toLowerCase().replace(/\s+/g, "-") ||
+            params.name?.toLowerCase().includes(c.name.split(" ").pop()?.toLowerCase() ?? ""),
+        );
+
+        if (match) {
+          onComponentAdd({ type: "candidate", data: match });
+        } else {
+          onComponentAdd({
+            type: "candidate",
+            data: {
+              id: params.name?.toLowerCase().replace(/\s+/g, "-") ?? "unknown",
+              name: params.name ?? "Unknown",
+              party: (params.party?.charAt(0).toUpperCase() ?? "D") as "D" | "R" | "M" | "X" | "NP",
+              office: params.office ?? "",
+              currentRole: params.currentRole ?? "",
+              type: "challenger",
+              raceCategory: "governor",
+              photoUrl: null,
+              keyFact: params.keyFact ?? "",
+              findings: params.findingsCount ?? 0,
+              severity: (params.severity as "high" | "medium" | "low") ?? "medium",
+            },
+          });
+        }
         return "displayed";
       },
 
