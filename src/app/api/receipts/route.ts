@@ -41,7 +41,8 @@ export async function POST(req: Request) {
           url: ("url" in r ? r.url : "") ?? "",
           description: ("description" in r ? r.description : "") ?? "",
         }));
-      } catch {
+      } catch (err) {
+        console.error("Firecrawl search error:", err instanceof Error ? err.message : err);
         return [];
       }
     });
