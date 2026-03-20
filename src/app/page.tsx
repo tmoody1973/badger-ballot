@@ -47,18 +47,12 @@ export default function BallotBadger() {
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Top bar */}
-      <header className="flex items-center gap-4 border-b-2 border-border px-5 py-3 shrink-0 bg-wi-blue-light">
-        <div className="flex items-center gap-3">
-          <img src="/badger-logo.jpg" alt="Ballot Badger" className="h-10 w-10 rounded-base border-2 border-border" />
-          <div className="flex items-baseline gap-2.5">
-            <span className="text-xs font-bold tracking-[0.2em] font-mono text-wi-blue">
-              WI 2026
-            </span>
-            <h1 className="text-xl font-heading text-foreground">
-              Ballot Badger
-            </h1>
-          </div>
-        </div>
+      <header className="flex items-center gap-4 border-b-2 border-border px-5 py-2 shrink-0 bg-wi-blue-light">
+        <img
+          src="/branding/badger-ballot-logo.svg"
+          alt="Ballot Badger"
+          className="h-[84px] object-contain"
+        />
 
         <div className="flex-1" />
 
