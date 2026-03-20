@@ -4,8 +4,8 @@
 
 export const CANDIDATE_PHOTOS: Record<string, string> = {
   // Governor — Democrats
-  barnes: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Mandela_Barnes.jpg/440px-Mandela_Barnes.jpg",
-  rodriguez: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Sara_Rodriguez_%28cropped%29.jpg/440px-Sara_Rodriguez_%28cropped%29.jpg",
+  barnes: "/candidates/Mandela-Headshot.jpg",
+  rodriguez: "/candidates/sara-rodriguez-02.jpeg",
   roys: "/candidates/politics-election-2026-governor-roys-committee-1536x864.jpg",
   hong: "https://upload.wikimedia.org/wikipedia/commons/9/9e/Francesca_Hong_IMG_2500_%281%29.jpg",
   crowley: "https://upload.wikimedia.org/wikipedia/commons/e/e2/David_Crowley.jpg",
