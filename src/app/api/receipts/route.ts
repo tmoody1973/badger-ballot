@@ -5,6 +5,12 @@ import { synthesizeReceipts } from "@/lib/synthesis";
 import { CANDIDATES } from "@/data/candidates";
 import type { CandidateType } from "@/types";
 
+interface SearchSnippet {
+  title: string;
+  url: string;
+  description: string;
+}
+
 export async function POST(req: Request) {
   try {
     const { candidate, topic } = await req.json();
@@ -16,7 +22,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Look up candidate info
     const candidateData = CANDIDATES.find(
       (c) =>
         c.id === candidate ||
@@ -26,53 +31,66 @@ export async function POST(req: Request) {
     const candidateType: CandidateType = candidateData?.type ?? "challenger";
     const candidateName = candidateData?.name ?? candidate;
 
-    // Get query templates based on candidate type
     const templates = getQueryTemplates(candidateType, candidateName, topic);
-
-    // Run parallel Firecrawl searches (Pass 1: no scrape, snippets only)
     const firecrawl = getFirecrawl();
 
-    const searchPromises = templates.queries.map(async (query) => {
-      try {
-        const result = await firecrawl.search(query, { limit: 5 });
-        const webResults = result.web ?? [];
-        return webResults.map((r) => ({
-          title: ("title" in r ? r.title : "") ?? "",
-          url: ("url" in r ? r.url : "") ?? "",
-          description: ("description" in r ? r.description : "") ?? "",
-        }));
-      } catch (err) {
-        console.error("Firecrawl search error:", err instanceof Error ? err.message : err);
-        return [];
-      }
-    });
-
-    const [official, statements, factchecks] = await Promise.all(
-      searchPromises,
+    // Run all searches in parallel with per-query limits and tbs
+    const allResults = await Promise.all(
+      templates.queries.map(async (sq) => {
+        try {
+          const options: Record<string, unknown> = { limit: sq.limit };
+          if (sq.tbs) {
+            options.tbs = sq.tbs;
+          }
+          const result = await firecrawl.search(sq.query, options);
+          const webResults = result.web ?? [];
+          return webResults.map((r): SearchSnippet => ({
+            title: ("title" in r ? r.title : "") ?? "",
+            url: ("url" in r ? r.url : "") ?? "",
+            description: ("description" in r ? r.description : "") ?? "",
+          }));
+        } catch (err) {
+          console.error(`Firecrawl error for "${sq.query}":`, err instanceof Error ? err.message : err);
+          return [];
+        }
+      }),
     );
 
-    const searchResults = { official, statements, factchecks };
+    // Deduplicate by URL across all results
+    const seen = new Set<string>();
+    const deduped: SearchSnippet[] = [];
+    for (const batch of allResults) {
+      for (const r of batch) {
+        if (r.url && !seen.has(r.url)) {
+          seen.add(r.url);
+          deduped.push(r);
+        }
+      }
+    }
 
-    // Synthesize with Claude Sonnet
+    // Split into categories for synthesis (first 3 queries map to official/statements/factchecks)
+    const official = allResults[0] ?? [];
+    const donors = allResults[1] ?? [];
+    const factchecks = allResults[2] ?? [];
+    const news = allResults[3] ?? [];
+    const platform = allResults[4] ?? [];
+
+    const searchResults = {
+      official: [...official, ...platform],
+      statements: [...donors, ...news],
+      factchecks,
+    };
+
     const synthesis = await synthesizeReceipts(
       candidateName,
       candidateType,
       searchResults,
     );
 
-    const sourceCount =
-      (official?.length ?? 0) +
-      (statements?.length ?? 0) +
-      (factchecks?.length ?? 0);
-
     return NextResponse.json({
       ...synthesis,
-      source_count: sourceCount,
-      sources: [
-        ...official.map((r) => ({ ...r, tier: "official" })),
-        ...statements.map((r) => ({ ...r, tier: "statement" })),
-        ...factchecks.map((r) => ({ ...r, tier: "factcheck" })),
-      ],
+      source_count: deduped.length,
+      sources: deduped.map((r) => ({ ...r, tier: "search" })),
       pass: 1,
     });
   } catch (error) {

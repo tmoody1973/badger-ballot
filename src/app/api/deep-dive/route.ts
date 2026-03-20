@@ -4,6 +4,12 @@ import { getDeepDiveQueries } from "@/lib/query-templates";
 import { synthesizeDeepDive } from "@/lib/synthesis";
 import { CANDIDATES } from "@/data/candidates";
 
+interface SearchSnippet {
+  title: string;
+  url: string;
+  description: string;
+}
+
 export async function POST(req: Request) {
   try {
     const { candidate, angle } = await req.json();
@@ -23,49 +29,58 @@ export async function POST(req: Request) {
 
     const candidateName = candidateData?.name ?? candidate;
 
-    // Get focused queries for the deep dive
     const queries = getDeepDiveQueries(candidateName, angle);
-
     const firecrawl = getFirecrawl();
 
-    // Run 1-2 focused searches
-    const searchPromises = queries.map(async (query) => {
-      try {
-        const result = await firecrawl.search(query, { limit: 5 });
-        const webResults = result.web ?? [];
-        return webResults.map((r) => ({
-          title: ("title" in r ? r.title : "") ?? "",
-          url: ("url" in r ? r.url : "") ?? "",
-          description: ("description" in r ? r.description : "") ?? "",
-        }));
-      } catch {
-        return [];
-      }
-    });
+    const allResults = await Promise.all(
+      queries.map(async (sq) => {
+        try {
+          const options: Record<string, unknown> = { limit: sq.limit };
+          if (sq.tbs) {
+            options.tbs = sq.tbs;
+          }
+          const result = await firecrawl.search(sq.query, options);
+          const webResults = result.web ?? [];
+          return webResults.map((r): SearchSnippet => ({
+            title: ("title" in r ? r.title : "") ?? "",
+            url: ("url" in r ? r.url : "") ?? "",
+            description: ("description" in r ? r.description : "") ?? "",
+          }));
+        } catch (err) {
+          console.error(`Firecrawl deep-dive error for "${sq.query}":`, err instanceof Error ? err.message : err);
+          return [];
+        }
+      }),
+    );
 
-    const results = await Promise.all(searchPromises);
+    // Deduplicate
+    const seen = new Set<string>();
+    const deduped: SearchSnippet[] = [];
+    for (const batch of allResults) {
+      for (const r of batch) {
+        if (r.url && !seen.has(r.url)) {
+          seen.add(r.url);
+          deduped.push(r);
+        }
+      }
+    }
 
     const searchResults = {
-      official: results[0] ?? [],
-      statements: results[1] ?? [],
-      factchecks: [],
+      official: allResults[0] ?? [],
+      statements: allResults[1] ?? [],
+      factchecks: allResults[2] ?? [],
     };
 
-    // Synthesize with Claude Sonnet (deep dive prompt)
     const synthesis = await synthesizeDeepDive(
       candidateName,
       angle,
       searchResults,
     );
 
-    const sourceCount = results.reduce((sum, r) => sum + r.length, 0);
-
     return NextResponse.json({
       ...synthesis,
-      source_count: sourceCount,
-      sources: results
-        .flat()
-        .map((r) => ({ ...r, tier: "deep_dive" })),
+      source_count: deduped.length,
+      sources: deduped.map((r) => ({ ...r, tier: "deep_dive" })),
       pass: 2,
       angle,
     });

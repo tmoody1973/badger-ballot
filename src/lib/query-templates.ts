@@ -1,16 +1,24 @@
 import type { CandidateType } from "@/types";
 
+export interface SearchQuery {
+  readonly query: string;
+  readonly limit: number;
+  readonly tbs?: string;
+}
+
 interface QueryTemplate {
-  readonly queries: readonly string[];
+  readonly queries: readonly SearchQuery[];
 }
 
 function incumbentQueries(candidate: string, topic?: string): QueryTemplate {
   const t = topic ?? "record";
   return {
     queries: [
-      `${candidate} voting record ${t} Wisconsin congress`,
-      `${candidate} campaign donors fundraising opensecrets PAC contributions Wisconsin 2026`,
-      `${candidate} ${t} fact check politifact Wisconsin 2026`,
+      { query: `${candidate} voting record ${t} congress.gov bills`, limit: 8 },
+      { query: `${candidate} campaign donors fundraising opensecrets PAC contributions`, limit: 8 },
+      { query: `${candidate} ${t} fact check politifact Wisconsin`, limit: 5 },
+      { query: `${candidate} Wisconsin 2026 news endorsements`, limit: 8, tbs: "qdr:y" },
+      { query: `${candidate} ${t} position statement policy Wisconsin`, limit: 5 },
     ],
   };
 }
@@ -19,9 +27,11 @@ function challengerQueries(candidate: string, topic?: string): QueryTemplate {
   const t = topic ?? "platform";
   return {
     queries: [
-      `${candidate} campaign platform ${t} endorsements Wisconsin 2026`,
-      `${candidate} fundraising donors raised campaign finance Wisconsin 2026`,
-      `${candidate} ${t} news coverage fact check Wisconsin 2026`,
+      { query: `${candidate} campaign platform ${t} issues positions Wisconsin 2026`, limit: 8 },
+      { query: `${candidate} fundraising donors raised campaign finance Wisconsin 2026`, limit: 8 },
+      { query: `${candidate} endorsements endorsed by unions organizations Wisconsin`, limit: 8 },
+      { query: `${candidate} Wisconsin 2026 news interview`, limit: 8, tbs: "qdr:y" },
+      { query: `${candidate} ${t} fact check background Wisconsin`, limit: 5 },
     ],
   };
 }
@@ -30,9 +40,11 @@ function openSeatQueries(candidate: string, topic?: string): QueryTemplate {
   const t = topic ?? "platform";
   return {
     queries: [
-      `${candidate} background ${t} Wisconsin`,
-      `${candidate} endorsements fundraising Wisconsin 2026`,
-      `${candidate} ${t} news coverage Wisconsin`,
+      { query: `${candidate} background experience ${t} Wisconsin`, limit: 8 },
+      { query: `${candidate} endorsements fundraising Wisconsin 2026`, limit: 8 },
+      { query: `${candidate} ${t} news coverage Wisconsin 2026`, limit: 8, tbs: "qdr:y" },
+      { query: `${candidate} campaign platform positions issues`, limit: 5 },
+      { query: `${candidate} Wisconsin primary election 2026`, limit: 5 },
     ],
   };
 }
@@ -41,9 +53,11 @@ function measureQueries(measureName: string, topic?: string): QueryTemplate {
   const t = topic ?? "analysis";
   return {
     queries: [
-      `Wisconsin ${measureName} amendment ${t} 2026`,
-      `Wisconsin ${measureName} amendment funding for against`,
-      `Wisconsin ${measureName} amendment similar states impact`,
+      { query: `Wisconsin ${measureName} amendment ${t} 2026 ballot`, limit: 8 },
+      { query: `Wisconsin ${measureName} amendment funding supporters opponents`, limit: 8 },
+      { query: `Wisconsin ${measureName} amendment impact analysis what it means`, limit: 8 },
+      { query: `Wisconsin ${measureName} constitutional amendment vote 2026 news`, limit: 8, tbs: "qdr:y" },
+      { query: `${measureName} similar amendment other states results`, limit: 5 },
     ],
   };
 }
@@ -52,9 +66,10 @@ function districtQueries(districtName: string, topic?: string): QueryTemplate {
   const t = topic ?? "race";
   return {
     queries: [
-      `Wisconsin ${districtName} 2026 ${t} candidates`,
-      `Wisconsin ${districtName} demographics voting history`,
-      `Wisconsin ${districtName} 2026 competitive rating forecast`,
+      { query: `Wisconsin ${districtName} 2026 ${t} candidates`, limit: 8 },
+      { query: `Wisconsin ${districtName} demographics voting history trends`, limit: 8 },
+      { query: `Wisconsin ${districtName} 2026 competitive rating cook report`, limit: 5 },
+      { query: `Wisconsin ${districtName} election news 2026`, limit: 5, tbs: "qdr:y" },
     ],
   };
 }
@@ -81,9 +96,10 @@ export function getQueryTemplates(
 export function getDeepDiveQueries(
   name: string,
   angle: string,
-): readonly string[] {
+): readonly SearchQuery[] {
   return [
-    `${name} ${angle} Wisconsin 2026 detailed`,
-    `${name} ${angle} Wisconsin sources data`,
+    { query: `${name} ${angle} Wisconsin 2026 detailed analysis`, limit: 8 },
+    { query: `${name} ${angle} Wisconsin sources records data`, limit: 8 },
+    { query: `${name} ${angle} news investigation report`, limit: 5, tbs: "qdr:y" },
   ];
 }
