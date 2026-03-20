@@ -209,8 +209,6 @@ export function useVoiceAgent({
   });
 
   const startVoiceSession = useCallback(async () => {
-    if (!selectedCandidate) return;
-
     try {
       // Request microphone permission (requires HTTPS or localhost)
       if (navigator.mediaDevices?.getUserMedia) {
@@ -220,23 +218,32 @@ export function useVoiceAgent({
         return;
       }
 
+      // Build dynamic variables
+      const dynamicVars: Record<string, string> = selectedCandidate
+        ? {
+            candidate_name: selectedCandidate.name,
+            candidate_id: selectedCandidate.id,
+            candidate_type: selectedCandidate.type,
+            candidate_office: selectedCandidate.office,
+          }
+        : {
+            candidate_name: "",
+            candidate_id: "",
+            candidate_type: "",
+            candidate_office: "",
+          };
+
       // Get signed URL for secure connection
       const res = await fetch("/api/eleven-signed-url");
       const { signedUrl, error } = await res.json();
 
       if (error || !signedUrl) {
-        // Fall back to public agent ID
         const agentId = process.env.NEXT_PUBLIC_ELEVEN_AGENT_ID;
         if (agentId) {
           await conversation.startSession({
             agentId,
             connectionType: "webrtc",
-            dynamicVariables: {
-              candidate_name: selectedCandidate.name,
-              candidate_id: selectedCandidate.id,
-              candidate_type: selectedCandidate.type,
-              candidate_office: selectedCandidate.office,
-            },
+            dynamicVariables: dynamicVars,
           });
         } else {
           onStatusChange("ElevenLabs agent not configured. Using click mode.");
@@ -245,12 +252,7 @@ export function useVoiceAgent({
       } else {
         await conversation.startSession({
           signedUrl,
-          dynamicVariables: {
-            candidate_name: selectedCandidate.name,
-            candidate_id: selectedCandidate.id,
-            candidate_type: selectedCandidate.type,
-            candidate_office: selectedCandidate.office,
-          },
+          dynamicVariables: dynamicVars,
         });
       }
 

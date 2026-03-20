@@ -302,10 +302,23 @@ export default function BallotBadger() {
     }
   }, [voiceAgent]);
 
-  function handlePullReceipts() {
-    if (!selectedCandidate) return;
+  // Voice-first: start a conversation without selecting a candidate
+  const startConversation = useCallback(async () => {
+    setIsActive(true);
+    setVoiceMode(true);
+    setStatusText("Connecting to Ballot Badger...");
 
+    try {
+      await voiceAgent.startVoiceSession();
+    } catch {
+      setVoiceMode(false);
+      setStatusText("Voice unavailable. Select a candidate and use Search.");
+    }
+  }, [voiceAgent]);
+
+  function handleVoiceToggle() {
     if (isActive) {
+      // Stop everything
       setIsActive(false);
       setStatusText(null);
       setVoiceMode(false);
@@ -316,7 +329,13 @@ export default function BallotBadger() {
       return;
     }
 
-    pullReceiptsCombined(selectedCandidate);
+    // If a candidate is selected, do combined voice + search
+    if (selectedCandidate) {
+      pullReceiptsCombined(selectedCandidate);
+    } else {
+      // No candidate selected — just start voice conversation
+      startConversation();
+    }
   }
 
   function handleClickFallback() {
@@ -368,8 +387,8 @@ export default function BallotBadger() {
       <VoiceBar
         isActive={isActive}
         selectedName={selectedCandidate?.name ?? null}
-        onToggle={handlePullReceipts}
-        onClickFallback={handleClickFallback}
+        onToggle={handleVoiceToggle}
+        onClickFallback={selectedCandidate ? handleClickFallback : undefined}
         statusText={statusText}
         isLoading={isLoading}
         voiceMode={voiceMode}

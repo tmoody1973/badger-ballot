@@ -27,20 +27,20 @@ export function VoiceBar({
     ?? (isActive && voiceMode
       ? isSpeaking
         ? "Agent is speaking..."
-        : "Listening... ask about their record or say \u201Cgo deeper\u201D"
+        : "Listening... ask about any candidate or say \u201Cgo deeper\u201D"
       : isActive
         ? "Searching..."
         : selectedName
           ? `Ready to investigate ${selectedName}`
-          : "Select a candidate first");
+          : "Ask about any Wisconsin candidate, ballot measure, or election");
 
   return (
     <div className="flex items-center gap-3 border-t-2 border-border px-4 py-3 bg-secondary-background">
-      {/* Voice button */}
+      {/* Main voice button — always enabled */}
       <button
         onClick={onToggle}
-        disabled={!selectedName || isLoading}
-        className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-base border-2 border-border text-white text-sm font-heading px-4 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-shadow"
+        disabled={isLoading}
+        className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-base border-2 border-border text-white text-sm font-heading px-5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-shadow"
         style={{
           backgroundColor: isActive ? "var(--status-error)" : "var(--wi-blue)",
           animation: isActive && !isLoading && voiceMode ? "pulseGlow 2s ease infinite" : "none",
@@ -53,12 +53,14 @@ export function VoiceBar({
           </>
         ) : isActive ? (
           <>&#x23F8; Stop</>
-        ) : (
+        ) : selectedName ? (
           <>{"\u{1F399}"} Pull the receipts</>
+        ) : (
+          <>{"\u{1F399}"} Talk to Ballot Badger</>
         )}
       </button>
 
-      {/* Click-based fallback button */}
+      {/* Search-only fallback — only when candidate is selected */}
       {selectedName && !isActive && onClickFallback && (
         <button
           onClick={onClickFallback}
