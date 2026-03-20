@@ -8,6 +8,7 @@ import { CandidateDirectory } from "@/components/CandidateDirectory";
 import { ComponentRenderer } from "@/components/ComponentRenderer";
 import { VoiceBar } from "@/components/VoiceBar";
 import { RaceFilter } from "@/components/RaceFilter";
+import { DiggingProgress } from "@/components/DiggingProgress";
 import { useVoiceAgent } from "@/lib/useVoiceAgent";
 
 interface ReceiptsResponse {
@@ -351,12 +352,12 @@ export default function BallotBadger() {
 
         {/* Right: component render area */}
         <main ref={mainRef} className="flex-1 overflow-y-auto">
-          {isLoading && components.length <= 1 && (
-            <div className="flex items-center justify-center p-8 gap-3">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-wi-blue border-t-transparent" />
-              <span className="text-sm font-mono text-muted-foreground">
-                Searching public records, news, and campaign finance data...
-              </span>
+          {isLoading && components.length <= 1 && selectedCandidate && (
+            <div className="p-5 max-w-3xl mx-auto">
+              <DiggingProgress
+                candidate={selectedCandidate}
+                isActive={isLoading}
+              />
             </div>
           )}
           <ComponentRenderer components={components} />
