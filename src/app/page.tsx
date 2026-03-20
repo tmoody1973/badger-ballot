@@ -100,7 +100,6 @@ function buildComponentsFromResponse(
       },
     });
 
-    // Auto-generate a fundraising chart from donor data
     const chartBars = response.donors.donors
       .filter((d) => d.amount && d.amount.startsWith("$"))
       .map((d) => ({
@@ -174,6 +173,7 @@ export default function BallotBadger() {
   const [statusText, setStatusText] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
+  const searchInProgressRef = useRef<string | null>(null);
 
   const filtered = useMemo(() => {
     if (filter === "all") return CANDIDATES;
@@ -185,10 +185,57 @@ export default function BallotBadger() {
     [selected],
   );
 
-  // Voice agent with client tools
+  // === SINGLE search function used by ALL paths ===
+  const runSearch = useCallback(async (candidate: Candidate) => {
+    // Prevent duplicate searches for the same candidate
+    if (searchInProgressRef.current === candidate.id) return;
+    searchInProgressRef.current = candidate.id;
+
+    setSelected(candidate.id);
+    setIsLoading(true);
+    setIsActive(true);
+    setComponents([{ type: "candidate", data: candidate }]);
+    setStatusText("Digging into the records...");
+
+    try {
+      const response = await fetch("/api/receipts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidate: candidate.id }),
+      });
+
+      const data: ReceiptsResponse = await response.json();
+
+      if (data.error) {
+        setStatusText(`Error: ${data.error}`);
+        return;
+      }
+
+      const newComponents = buildComponentsFromResponse(data, candidate);
+
+      // Stagger component reveals
+      setComponents([newComponents[0]]);
+      for (let i = 1; i < newComponents.length; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        setComponents((prev) => [...prev, newComponents[i]]);
+        if (mainRef.current) {
+          mainRef.current.scrollTop = mainRef.current.scrollHeight;
+        }
+      }
+
+      const sourceCount = data.source_count ?? 0;
+      setStatusText(`Found ${sourceCount} sources. Say "go deeper" or ask a follow-up.`);
+    } catch {
+      setStatusText("Search failed. Try again.");
+    } finally {
+      setIsLoading(false);
+      searchInProgressRef.current = null;
+    }
+  }, []);
+
+  // === Voice agent callbacks ===
   const handleComponentAdd = useCallback((component: RenderedComponent) => {
     setComponents((prev) => [...prev, component]);
-    // Auto-scroll
     setTimeout(() => {
       if (mainRef.current) {
         mainRef.current.scrollTop = mainRef.current.scrollHeight;
@@ -200,43 +247,13 @@ export default function BallotBadger() {
     setStatusText(status);
   }, []);
 
-  const handleVoiceSelectCandidate = useCallback(async (id: string) => {
-    setSelected(id);
-    setComponents([]);
-
-    // When voice agent selects a candidate, auto-trigger the search
+  // When voice agent selects a candidate → run search
+  const handleVoiceSelectCandidate = useCallback((id: string) => {
     const candidate = CANDIDATES.find((c) => c.id === id);
-    if (!candidate) return;
-
-    setIsLoading(true);
-    setComponents([{ type: "candidate", data: candidate }]);
-
-    try {
-      const response = await fetch("/api/receipts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidate: id }),
-      });
-      const data: ReceiptsResponse = await response.json();
-      if (!data.error) {
-        const newComponents = buildComponentsFromResponse(data, candidate);
-        setComponents([newComponents[0]]);
-        for (let i = 1; i < newComponents.length; i++) {
-          await new Promise((resolve) => setTimeout(resolve, 600));
-          setComponents((prev) => [...prev, newComponents[i]]);
-          if (mainRef.current) {
-            mainRef.current.scrollTop = mainRef.current.scrollHeight;
-          }
-        }
-        const sourceCount = data.source_count ?? 0;
-        setStatusText(`Found ${sourceCount} sources. Say "go deeper" or ask a follow-up.`);
-      }
-    } catch {
-      // Search failed but voice is still running
-    } finally {
-      setIsLoading(false);
+    if (candidate) {
+      runSearch(candidate);
     }
-  }, []);
+  }, [runSearch]);
 
   const handleVoiceSetFilter = useCallback((f: string) => {
     setFilter(f as FilterKey);
@@ -244,43 +261,16 @@ export default function BallotBadger() {
 
   const handleVoiceClearResults = useCallback(() => {
     setComponents([]);
+    searchInProgressRef.current = null;
   }, []);
 
-  // When voice agent detects a candidate, trigger the full visual search
-  const handleCandidateResearch = useCallback(async (candidateId: string) => {
+  // When voice agent's show_candidate fires → run search if not already running
+  const handleCandidateResearch = useCallback((candidateId: string) => {
     const candidate = CANDIDATES.find((c) => c.id === candidateId);
-    if (!candidate) return;
-
-    setSelected(candidateId);
-    setIsLoading(true);
-    setStatusText("Digging into the records...");
-
-    try {
-      const response = await fetch("/api/receipts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidate: candidateId }),
-      });
-      const data: ReceiptsResponse = await response.json();
-      if (!data.error) {
-        const newComponents = buildComponentsFromResponse(data, candidate);
-        // Don't replace candidate card — it was already added by show_candidate
-        for (let i = 1; i < newComponents.length; i++) {
-          await new Promise((resolve) => setTimeout(resolve, 600));
-          setComponents((prev) => [...prev, newComponents[i]]);
-          if (mainRef.current) {
-            mainRef.current.scrollTop = mainRef.current.scrollHeight;
-          }
-        }
-        const sourceCount = data.source_count ?? 0;
-        setStatusText(`Found ${sourceCount} sources. Say "go deeper" or ask a follow-up.`);
-      }
-    } catch {
-      // Voice is still running — search failed silently
-    } finally {
-      setIsLoading(false);
+    if (candidate) {
+      runSearch(candidate);
     }
-  }, []);
+  }, [runSearch]);
 
   const voiceAgent = useVoiceAgent({
     onComponentAdd: handleComponentAdd,
@@ -292,6 +282,7 @@ export default function BallotBadger() {
     selectedCandidate,
   });
 
+  // === User interactions ===
   function handleSelect(id: string) {
     setSelected(id);
     setIsActive(false);
@@ -299,111 +290,17 @@ export default function BallotBadger() {
     setComponents([]);
     setStatusText(null);
     setVoiceMode(false);
-    // Stop voice session if running
+    searchInProgressRef.current = null;
     if (voiceAgent.isConnected) {
       voiceAgent.stopVoiceSession();
     }
   }
 
-  // Click-based receipts pull (fallback when voice isn't available)
-  const pullReceiptsClick = useCallback(async (candidate: Candidate) => {
-    setIsLoading(true);
-    setIsActive(true);
-    setVoiceMode(false);
-    setComponents([{ type: "candidate", data: candidate }]);
-    setStatusText("Digging into the records...");
-
-    try {
-      const response = await fetch("/api/receipts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidate: candidate.id }),
-      });
-
-      const data: ReceiptsResponse = await response.json();
-
-      if (data.error) {
-        setStatusText(`Error: ${data.error}`);
-        setIsLoading(false);
-        return;
-      }
-
-      const newComponents = buildComponentsFromResponse(data, candidate);
-
-      setComponents([newComponents[0]]);
-      for (let i = 1; i < newComponents.length; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        setComponents((prev) => [...prev, newComponents[i]]);
-        if (mainRef.current) {
-          mainRef.current.scrollTop = mainRef.current.scrollHeight;
-        }
-      }
-
-      const sourceCount = data.source_count ?? 0;
-      setStatusText(`Found ${sourceCount} sources. Say "go deeper" or ask a follow-up.`);
-    } catch {
-      setStatusText("Search failed. Try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Combined: voice agent connects AND search runs simultaneously
-  const pullReceiptsCombined = useCallback(async (candidate: Candidate) => {
-    setIsLoading(true);
-    setIsActive(true);
-    setVoiceMode(true);
-    setComponents([{ type: "candidate", data: candidate }]);
-    setStatusText("Connecting voice agent + searching...");
-
-    // Start voice session in background (non-blocking)
-    voiceAgent.startVoiceSession().catch(() => {
-      // Voice failed — that's OK, search results will still render
-      setVoiceMode(false);
-    });
-
-    // Simultaneously run the search and render results
-    try {
-      const response = await fetch("/api/receipts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidate: candidate.id }),
-      });
-
-      const data: ReceiptsResponse = await response.json();
-
-      if (data.error) {
-        setStatusText(`Error: ${data.error}`);
-        setIsLoading(false);
-        return;
-      }
-
-      const newComponents = buildComponentsFromResponse(data, candidate);
-
-      setComponents([newComponents[0]]);
-      for (let i = 1; i < newComponents.length; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        setComponents((prev) => [...prev, newComponents[i]]);
-        if (mainRef.current) {
-          mainRef.current.scrollTop = mainRef.current.scrollHeight;
-        }
-      }
-
-      const sourceCount = data.source_count ?? 0;
-      setStatusText(`Found ${sourceCount} sources. Say "go deeper" or ask a follow-up.`);
-    } catch {
-      setStatusText("Search failed. Try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [voiceAgent]);
-
-  // Voice-first: start a conversation without selecting a candidate
+  // Start voice conversation (no candidate needed)
   const startConversation = useCallback(async () => {
     setIsActive(true);
     setVoiceMode(true);
     setStatusText("Connecting to Ballot Badger...");
-
     try {
       await voiceAgent.startVoiceSession();
     } catch {
@@ -419,24 +316,28 @@ export default function BallotBadger() {
       setStatusText(null);
       setVoiceMode(false);
       setIsLoading(false);
+      searchInProgressRef.current = null;
       if (voiceAgent.isConnected) {
         voiceAgent.stopVoiceSession();
       }
       return;
     }
 
-    // If a candidate is selected, do combined voice + search
     if (selectedCandidate) {
-      pullReceiptsCombined(selectedCandidate);
+      // Candidate selected — start voice + search simultaneously
+      setVoiceMode(true);
+      voiceAgent.startVoiceSession().catch(() => setVoiceMode(false));
+      runSearch(selectedCandidate);
     } else {
-      // No candidate selected — just start voice conversation
+      // No candidate — just start voice
       startConversation();
     }
   }
 
   function handleClickFallback() {
     if (!selectedCandidate) return;
-    pullReceiptsClick(selectedCandidate);
+    setVoiceMode(false);
+    runSearch(selectedCandidate);
   }
 
   return (
@@ -448,9 +349,7 @@ export default function BallotBadger() {
           alt="Ballot Badger"
           className="h-[84px] object-contain"
         />
-
         <div className="flex-1" />
-
         <RaceFilter filter={filter} onFilterChange={setFilter} />
       </header>
 
@@ -467,7 +366,7 @@ export default function BallotBadger() {
 
         {/* Right: component render area */}
         <main ref={mainRef} className="flex-1 overflow-y-auto">
-          {/* Voice active but no components yet — show listening state */}
+          {/* Voice listening state — no candidate yet */}
           {voiceMode && isActive && !isLoading && components.length === 0 && (
             <VoiceActiveState
               isConnected={voiceAgent.isConnected}
@@ -483,6 +382,7 @@ export default function BallotBadger() {
               />
             </div>
           )}
+          {/* Results */}
           <ComponentRenderer components={components} />
         </main>
       </div>
