@@ -251,34 +251,71 @@ export default function BallotBadger() {
     }
   }, []);
 
-  // Voice-based receipts pull
-  const pullReceiptsVoice = useCallback(async () => {
-    if (!selectedCandidate) return;
-
+  // Combined: voice agent connects AND search runs simultaneously
+  const pullReceiptsCombined = useCallback(async (candidate: Candidate) => {
+    setIsLoading(true);
     setIsActive(true);
     setVoiceMode(true);
-    setComponents([{ type: "candidate", data: selectedCandidate }]);
-    setStatusText("Connecting to voice agent...");
+    setComponents([{ type: "candidate", data: candidate }]);
+    setStatusText("Connecting voice agent + searching...");
 
-    await voiceAgent.startVoiceSession();
-  }, [selectedCandidate, voiceAgent]);
+    // Start voice session in background (non-blocking)
+    voiceAgent.startVoiceSession().catch(() => {
+      // Voice failed — that's OK, search results will still render
+      setVoiceMode(false);
+    });
+
+    // Simultaneously run the search and render results
+    try {
+      const response = await fetch("/api/receipts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidate: candidate.id }),
+      });
+
+      const data: ReceiptsResponse = await response.json();
+
+      if (data.error) {
+        setStatusText(`Error: ${data.error}`);
+        setIsLoading(false);
+        return;
+      }
+
+      const newComponents = buildComponentsFromResponse(data, candidate);
+
+      setComponents([newComponents[0]]);
+      for (let i = 1; i < newComponents.length; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        setComponents((prev) => [...prev, newComponents[i]]);
+        if (mainRef.current) {
+          mainRef.current.scrollTop = mainRef.current.scrollHeight;
+        }
+      }
+
+      const sourceCount = data.source_count ?? 0;
+      setStatusText(`Found ${sourceCount} sources. Say "go deeper" or ask a follow-up.`);
+    } catch {
+      setStatusText("Search failed. Try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [voiceAgent]);
 
   function handlePullReceipts() {
     if (!selectedCandidate) return;
 
     if (isActive) {
-      // Stop
       setIsActive(false);
       setStatusText(null);
       setVoiceMode(false);
+      setIsLoading(false);
       if (voiceAgent.isConnected) {
         voiceAgent.stopVoiceSession();
       }
       return;
     }
 
-    // Try voice first, fall back to click
-    pullReceiptsVoice();
+    pullReceiptsCombined(selectedCandidate);
   }
 
   function handleClickFallback() {
