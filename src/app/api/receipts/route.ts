@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFirecrawl } from "@/lib/firecrawl";
-import { getQueryTemplates } from "@/lib/query-templates";
+import { getQueryTemplates, KNOWN_FINANCE_URLS } from "@/lib/query-templates";
 import { synthesizeReceipts } from "@/lib/synthesis";
 import { CANDIDATES } from "@/data/candidates";
 import type { CandidateType } from "@/types";

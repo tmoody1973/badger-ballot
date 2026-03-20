@@ -95,19 +95,25 @@ export function getQueryTemplates(
   }
 }
 
+// Known finance data URLs for targeted Firecrawl scrapes
+export const KNOWN_FINANCE_URLS: Record<string, string> = {
+  // Supreme Court
+  taylor: "https://www.wisdc.org/follow-the-money/151-campaign-finance-profiles-2026/7943-campaign-2026-supreme-court",
+  lazar: "https://www.wisdc.org/follow-the-money/151-campaign-finance-profiles-2026/7943-campaign-2026-supreme-court",
+};
+
 // Deep dive queries — different for federal vs state candidates
 export function getDeepDiveQueries(
   name: string,
   angle: string,
 ): readonly SearchQuery[] {
-  // For finance-related angles, target Wisconsin-specific sources
   const isFinance = /donor|money|fund|pac|contribut|finance|raised/i.test(angle);
 
   if (isFinance) {
     return [
-      { query: `${name} campaign finance donors contributions Wisconsin 2026 detailed`, limit: 5 },
-      { query: `${name} fundraising PAC money top donors Wisconsin Examiner wisdc`, limit: 5 },
-      { query: `${name} campaign finance report Wisconsin Ethics Commission 2026`, limit: 5 },
+      { query: `"${name}" campaign finance donors "$" Wisconsin 2026`, limit: 5 },
+      { query: `"${name}" fundraising raised top donors Wisconsin Examiner WPR`, limit: 5 },
+      { query: `Wisconsin 2026 campaign finance report fundraising all candidates`, limit: 5 },
     ];
   }
 

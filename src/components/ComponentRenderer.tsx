@@ -10,6 +10,8 @@ import { MeasureCard } from "./MeasureCard";
 import { NewsHeadline } from "./NewsHeadline";
 import { PlatformCard } from "./PlatformCard";
 import { FundraisingChart } from "./FundraisingChart";
+import { FinanceFilingCard } from "./FinanceFilingCard";
+import { VoterInfoCard } from "./VoterInfoCard";
 
 interface ComponentRendererProps {
   readonly components: readonly RenderedComponent[];
@@ -48,6 +50,8 @@ export function ComponentRenderer({ components }: ComponentRendererProps) {
   const platform = components.filter((c) => c.type === "platform");
   const measures = components.filter((c) => c.type === "measure");
   const charts = components.filter((c) => c.type === "fundraisingChart");
+  const filings = components.filter((c) => c.type === "financeFiling");
+  const voterInfo = components.filter((c) => c.type === "voterInfo");
 
   return (
     <div className="p-5 max-w-3xl mx-auto">
@@ -127,6 +131,28 @@ export function ComponentRenderer({ components }: ComponentRendererProps) {
           <div className="space-y-3">
             {charts.map((component, i) => (
               <FundraisingChart key={`chart-${i}`} data={component.data} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {filings.length > 0 && (
+        <>
+          <SectionHeader label="Official Filings" icon={"\u{1F3DB}"} />
+          <div className="space-y-3">
+            {filings.map((component, i) => (
+              <FinanceFilingCard key={`filing-${i}`} data={component.data} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {voterInfo.length > 0 && (
+        <>
+          <SectionHeader label="Your Voter Info" icon={"\u{1F5F3}"} />
+          <div className="space-y-3">
+            {voterInfo.map((component, i) => (
+              <VoterInfoCard key={`voter-${i}`} data={component.data} />
             ))}
           </div>
         </>

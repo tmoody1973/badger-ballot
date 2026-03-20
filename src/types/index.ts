@@ -123,4 +123,6 @@ export type RenderedComponent =
   | { readonly type: "measure"; readonly data: MeasureData }
   | { readonly type: "news"; readonly data: NewsHeadlineData }
   | { readonly type: "platform"; readonly data: { issue: string; position: string; source: string; sourceUrl?: string; candidate: string } }
-  | { readonly type: "fundraisingChart"; readonly data: { title: string; bars: Array<{ name: string; amount: number; party: string; label: string }>; source?: string; sourceUrl?: string } };
+  | { readonly type: "fundraisingChart"; readonly data: { title: string; bars: Array<{ name: string; amount: number; party: string; label: string }>; source?: string; sourceUrl?: string } }
+  | { readonly type: "financeFiling"; readonly data: { candidate: string; content: string; source: string; sourceUrl?: string } }
+  | { readonly type: "voterInfo"; readonly data: { address: string; content: string; source: string; sourceUrl?: string } };
