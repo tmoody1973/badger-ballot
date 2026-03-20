@@ -30,14 +30,15 @@ export async function POST(req: Request) {
       // Go directly to transactions filtered by candidate name + contributions
       await page.goto('${searchUrl}');
       await page.waitForLoadState('networkidle');
-      // Wait for the dynamic table to render — this is a React app
-      await page.waitForTimeout(6000);
-      // Wait specifically for a table or data rows to appear
-      await page.waitForSelector('table tbody tr, [role="row"]', { timeout: 10000 }).catch(() => {});
+      // Wait for the dynamic table to render — this is a Next.js RSC app
+      await page.waitForTimeout(8000);
+      // Wait specifically for table rows with dollar amounts
+      await page.waitForSelector('table tbody tr', { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(2000); // Extra wait for data to populate
 
-      // Extract the page content — should have contribution table
+      // Extract VISIBLE text (innerText), not raw HTML/RSC chunks
       const url = page.url();
-      const bodyText = await page.locator('body').textContent() || '';
+      const bodyText = await page.evaluate(() => document.body.innerText) || '';
 
       // Get stats section if visible
       let stats = '';
@@ -47,14 +48,14 @@ export async function POST(req: Request) {
         await statsSection.click().catch(() => {});
         await page.waitForTimeout(1000);
         const statsParent = page.locator('[class*="stats"], [class*="Stats"]').first();
-        stats = await statsParent.textContent().catch(() => '') || '';
+        stats = await statsParent.innerText().catch(() => '') || '';
       }
 
       // Get the contributions table
       const table = page.locator('table').first();
       let tableData = '';
       if (await table.isVisible({ timeout: 3000 }).catch(() => false)) {
-        tableData = await table.textContent() || '';
+        tableData = await table.innerText() || '';
       }
 
       // Also try the "Top 10 Donors" section if it exists
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
       if (await donorsSection.isVisible({ timeout: 1000 }).catch(() => false)) {
         await donorsSection.click().catch(() => {});
         await page.waitForTimeout(1000);
-        topDonors = await page.locator('[class*="chart"], [class*="list"]').first().textContent().catch(() => '') || '';
+        topDonors = await page.locator('[class*="chart"], [class*="list"]').first().innerText().catch(() => '') || '';
       }
 
       return {
