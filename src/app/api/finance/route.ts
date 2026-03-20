@@ -22,77 +22,53 @@ export async function POST(req: Request) {
     const candidateName = candidateData?.name ?? candidate;
 
     // Step 1: kernel.sh navigates the WI Campaign Finance site
-    // Strategy: Go to registrants page → search candidate name → click their profile → get contributions
-    const escapedName = candidateName.replace(/'/g, "\\'");
-    // Use last name for more reliable search
-    const lastName = candidateName.split(" ").pop()?.replace(/'/g, "\\'") ?? escapedName;
+    // Strategy: Use transactions page with searchTerm URL param — this shows actual contributions
+    const lastName = candidateName.split(" ").pop() ?? candidateName;
+    const searchUrl = `https://campaignfinance.wi.gov/browse-data/transactions?searchTerm=${encodeURIComponent(lastName)}&transactionType=Contribution`;
 
     const playwrightCode = `
-      // Navigate to registrants search page
-      await page.goto('https://campaignfinance.wi.gov/browse-data/registrants');
+      // Go directly to transactions filtered by candidate name + contributions
+      await page.goto('${searchUrl}');
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(4000);
 
-      // Find the search input — "Search by Registrant name, Candidate name, Treasurer..."
-      const searchInput = page.locator('input[placeholder*="Search by"], input[type="search"], input[type="text"]').last();
-      await searchInput.waitFor({ state: 'visible', timeout: 5000 });
-      await searchInput.click();
-      await searchInput.fill('${lastName}');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(3000);
-
-      // Look for the candidate in the results table
-      const rows = page.locator('table tbody tr, [role="row"]');
-      const rowCount = await rows.count();
-
-      let candidateUrl = '';
-      let candidateInfo = '';
-
-      // Find the row containing our candidate's name and click the link
-      for (let i = 0; i < Math.min(rowCount, 20); i++) {
-        const rowText = await rows.nth(i).textContent() || '';
-        if (rowText.toLowerCase().includes('${lastName.toLowerCase()}')) {
-          candidateInfo = rowText.slice(0, 500);
-
-          // Try to find a clickable link in this row
-          const link = rows.nth(i).locator('a').first();
-          if (await link.isVisible({ timeout: 1000 }).catch(() => false)) {
-            const href = await link.getAttribute('href');
-            if (href) {
-              candidateUrl = href.startsWith('http') ? href : 'https://campaignfinance.wi.gov' + href;
-              await link.click();
-              await page.waitForTimeout(3000);
-              break;
-            }
-          }
-          break;
-        }
-      }
-
-      // Get the final page URL and content
-      const finalUrl = page.url();
+      // Extract the page content — should have contribution table
+      const url = page.url();
       const bodyText = await page.locator('body').textContent() || '';
 
-      // Try to extract table data if present
-      const tables = await page.locator('table').count();
+      // Get stats section if visible
+      let stats = '';
+      const statsSection = page.locator('text=Stats for this search').first();
+      if (await statsSection.isVisible({ timeout: 2000 }).catch(() => false)) {
+        // Try to expand stats
+        await statsSection.click().catch(() => {});
+        await page.waitForTimeout(1000);
+        const statsParent = page.locator('[class*="stats"], [class*="Stats"]').first();
+        stats = await statsParent.textContent().catch(() => '') || '';
+      }
+
+      // Get the contributions table
+      const table = page.locator('table').first();
       let tableData = '';
-      if (tables > 0) {
-        for (let t = 0; t < Math.min(tables, 3); t++) {
-          const tbl = await page.locator('table').nth(t).textContent() || '';
-          if (tbl.includes('$') || tbl.includes('Contribution') || tbl.includes('Amount')) {
-            tableData += tbl.slice(0, 2000) + '\\n---\\n';
-          }
-        }
+      if (await table.isVisible({ timeout: 3000 }).catch(() => false)) {
+        tableData = await table.textContent() || '';
+      }
+
+      // Also try the "Top 10 Donors" section if it exists
+      let topDonors = '';
+      const donorsSection = page.locator('text=Top 10').first();
+      if (await donorsSection.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await donorsSection.click().catch(() => {});
+        await page.waitForTimeout(1000);
+        topDonors = await page.locator('[class*="chart"], [class*="list"]').first().textContent().catch(() => '') || '';
       }
 
       return {
-        url: finalUrl,
-        candidateUrl,
-        candidateInfo,
-        rowCount,
-        hasTable: tables > 0,
+        url,
+        stats: stats.slice(0, 1000),
         tableData: tableData.slice(0, 3000),
-        textPreview: bodyText.slice(0, 3000),
+        topDonors: topDonors.slice(0, 1000),
+        textPreview: bodyText.slice(0, 2000),
       };
     `;
 
@@ -107,11 +83,12 @@ export async function POST(req: Request) {
         url?: string;
         textPreview?: string;
         tableData?: string;
-        hasTable?: boolean;
+        stats?: string;
+        topDonors?: string;
       };
       sourceUrl = result?.url ?? "";
 
-      // Step 2: If we got a results URL, Firecrawl scrapes it for clean data
+      // Step 2: Firecrawl scrapes the kernel-navigated page for clean data
       if (sourceUrl && sourceUrl !== "about:blank") {
         try {
           const firecrawl = getFirecrawl();
@@ -121,10 +98,23 @@ export async function POST(req: Request) {
           firecrawlContent = scrapeResult.markdown?.slice(0, 5000) ?? "";
         } catch {
           // Firecrawl scrape failed — use kernel's text extraction
-          firecrawlContent = result?.tableData || result?.textPreview || "";
+          // Combine all extracted data
+          const parts = [
+            result?.stats ? `STATS:\n${result.stats}` : "",
+            result?.topDonors ? `TOP DONORS:\n${result.topDonors}` : "",
+            result?.tableData ? `TRANSACTIONS:\n${result.tableData}` : "",
+            result?.textPreview || "",
+          ].filter(Boolean);
+          firecrawlContent = parts.join("\n\n---\n\n");
         }
       } else {
-        firecrawlContent = result?.tableData || result?.textPreview || "";
+        const parts = [
+          result?.stats ? `STATS:\n${result.stats}` : "",
+          result?.topDonors ? `TOP DONORS:\n${result.topDonors}` : "",
+          result?.tableData ? `TRANSACTIONS:\n${result.tableData}` : "",
+          result?.textPreview || "",
+        ].filter(Boolean);
+        firecrawlContent = parts.join("\n\n---\n\n");
       }
     } else {
       // kernel.sh failed — fall back to Firecrawl search + scrape
