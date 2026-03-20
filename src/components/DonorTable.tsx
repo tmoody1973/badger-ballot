@@ -1,6 +1,7 @@
 "use client";
 
 import type { DonorTableData } from "@/types";
+import { CitationLink } from "./CitationLink";
 
 interface DonorTableProps {
   readonly data: DonorTableData;
@@ -17,8 +18,8 @@ export function DonorTable({ data }: DonorTableProps) {
         <span className="rounded-base border-2 border-border px-2.5 py-1 text-xs font-bold tracking-wider font-mono bg-[var(--party-measure-bg)] text-[var(--party-measure)]">
           DONORS
         </span>
-        <span className="text-xs font-mono text-muted-foreground">
-          {data.source}
+        <span className="text-xs text-muted-foreground">
+          <CitationLink source={data.source} sourceUrl={data.sourceUrl} />
         </span>
       </div>
 

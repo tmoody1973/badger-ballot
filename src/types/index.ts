@@ -38,6 +38,7 @@ export interface VoteData {
   readonly context: string;
   readonly date?: string;
   readonly source: string;
+  readonly sourceUrl?: string;
   readonly candidate: string;
 }
 
@@ -53,12 +54,14 @@ export interface DonorTableData {
   readonly donors: readonly DonorData[];
   readonly totalRaised?: string;
   readonly source: string;
+  readonly sourceUrl?: string;
 }
 
 export interface FactCheckData {
   readonly claim: string;
   readonly rating: string;
   readonly source: string;
+  readonly sourceUrl?: string;
   readonly year: string;
   readonly candidate: string;
 }
@@ -67,6 +70,7 @@ export interface EndorsementData {
   readonly endorser: string;
   readonly type: string;
   readonly context: string;
+  readonly sourceUrl?: string;
   readonly candidate: string;
 }
 

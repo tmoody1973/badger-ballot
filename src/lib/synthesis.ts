@@ -35,11 +35,11 @@ Return ONLY valid JSON matching this schema:
     "keyFact": string,
     "type": string
   },
-  "votes": [{ "bill": string, "vote": string, "context": string, "date": string?, "source": string }],
-  "donors": { "donors": [{ "name": string, "amount": string, "type": string, "cycle": string }], "totalRaised": string?, "source": string } | null,
-  "factChecks": [{ "claim": string, "rating": string, "source": string, "year": string }],
-  "endorsements": [{ "endorser": string, "type": string, "context": string }],
-  "platform": [{ "issue": string, "position": string, "source": string }],
+  "votes": [{ "bill": string, "vote": string, "context": string, "date": string?, "source": string, "sourceUrl": string }],
+  "donors": { "donors": [{ "name": string, "amount": string, "type": string, "cycle": string }], "totalRaised": string?, "source": string, "sourceUrl": string } | null,
+  "factChecks": [{ "claim": string, "rating": string, "source": string, "sourceUrl": string, "year": string }],
+  "endorsements": [{ "endorser": string, "type": string, "context": string, "sourceUrl": string }],
+  "platform": [{ "issue": string, "position": string, "source": string, "sourceUrl": string }],
   "summary": {
     "officialSources": number,
     "newsSources": number,
@@ -54,6 +54,7 @@ Rules:
 - For votes, use exact vote values: "Yea", "Nay", "Objected", "Abstain", "Sponsored", "Not Voting".
 - For fact checks, use PolitiFact ratings when available: "True", "Mostly True", "Half True", "Mostly False", "False", "Pants on Fire".
 - Always cite the source name (e.g., "Congress.gov", "OpenSecrets", "PolitiFact").
+- ALWAYS include the sourceUrl from the search results for each finding. This is the URL where the data was found.
 - Keep the keyFinding to one clear sentence.`;
 
 export async function synthesizeReceipts(

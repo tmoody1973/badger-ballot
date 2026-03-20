@@ -1,6 +1,7 @@
 "use client";
 
 import type { VoteData } from "@/types";
+import { CitationLink } from "./CitationLink";
 
 interface VoteRecordProps {
   readonly data: VoteData;
@@ -34,11 +35,10 @@ export function VoteRecord({ data }: VoteRecordProps) {
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
             {data.context}
           </p>
-          {data.date && (
-            <p className="mt-2.5 text-xs font-mono text-muted-foreground">
-              {data.date} &middot; {data.source}
-            </p>
-          )}
+          <p className="mt-2.5 text-xs text-muted-foreground">
+            {data.date && <>{data.date} &middot; </>}
+            <CitationLink source={data.source} sourceUrl={data.sourceUrl} />
+          </p>
         </div>
         <span
           className="shrink-0 rounded-base border-2 border-border px-4 py-2 text-sm font-mono font-bold tracking-wider"

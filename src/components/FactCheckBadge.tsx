@@ -1,6 +1,7 @@
 "use client";
 
 import type { FactCheckData } from "@/types";
+import { CitationLink } from "./CitationLink";
 
 interface FactCheckBadgeProps {
   readonly data: FactCheckData;
@@ -35,8 +36,8 @@ export function FactCheckBadge({ data }: FactCheckBadgeProps) {
         <span className="rounded-base border-2 border-border px-2.5 py-1 text-xs font-bold tracking-wider font-mono bg-[var(--party-r-bg)] text-[var(--status-error)]">
           FACT CHECK
         </span>
-        <span className="text-xs font-mono text-muted-foreground">
-          {data.source} &middot; {data.year}
+        <span className="text-xs text-muted-foreground">
+          <CitationLink source={data.source} sourceUrl={data.sourceUrl} /> &middot; {data.year}
         </span>
       </div>
 
