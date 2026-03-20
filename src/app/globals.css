@@ -2,29 +2,66 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Wisconsin-branded palette */
+  /* === Neobrutalism layout tokens === */
+  --border-radius: 5px;
+  --box-shadow-x: 4px;
+  --box-shadow-y: 4px;
+  --reverse-box-shadow-x: -4px;
+  --reverse-box-shadow-y: -4px;
+  --heading-font-weight: 700;
+  --base-font-weight: 500;
+
+  /* === Wisconsin-branded palette === */
   --wi-blue: #002986;
   --wi-gold: #FFCC18;
   --wi-blue-light: #E5F0FF;
 
-  /* Surfaces */
-  --surface: #FFFFFF;
-  --border: oklch(0.922 0 0);
+  /* === Neobrutalism + Wisconsin merged colors === */
+  --background: #F7F7F9;
+  --secondary-background: #FFFFFF;
+  --foreground: #1F2933;
+  --main: #002986;
+  --main-foreground: #FFFFFF;
+  --border: #1F2933;
+  --ring: #1F2933;
+  --overlay: oklch(0% 0 0 / 0.8);
+  --shadow: var(--box-shadow-x) var(--box-shadow-y) 0px 0px var(--border);
 
-  /* Text */
+  /* === Surfaces === */
+  --surface: #FFFFFF;
+  --card: #FFFFFF;
+  --card-foreground: #1F2933;
+  --popover: #FFFFFF;
+  --popover-foreground: #1F2933;
+
+  /* === Text === */
   --text-primary: #1F2933;
   --text-secondary: #6B7280;
   --text-on-blue: #FFFFFF;
 
-  /* Status */
+  /* === shadcn semantic tokens (Wisconsin-ified) === */
+  --primary: #002986;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F7F7F9;
+  --secondary-foreground: #1F2933;
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
+  --accent: #FFCC18;
+  --accent-foreground: #1F2933;
+  --destructive: #B91C1C;
+  --input: #E5E7EB;
+
+  /* === Status === */
   --status-success: #15803D;
   --status-warning: #CA8A04;
   --status-error: #B91C1C;
 
-  /* Party colors (subtle tints for backgrounds, stronger for badges) */
+  /* === Party colors === */
   --party-r: #DC2626;
   --party-r-bg: #FEF2F2;
   --party-d: #2563EB;
@@ -36,83 +73,104 @@
   --party-nonpartisan: #0891B2;
   --party-nonpartisan-bg: #ECFEFF;
 
-  /* Severity */
+  /* === Severity === */
   --severity-high: #B91C1C;
   --severity-medium: #CA8A04;
   --severity-low: #6B7280;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  /* === Charts === */
+  --chart-1: #002986;
+  --chart-2: #DC2626;
+  --chart-3: #FFCC18;
+  --chart-4: #15803D;
+  --chart-5: #7C3AED;
+  --chart-active-dot: #000;
+
+  /* === Sidebar === */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1F2933;
+  --sidebar-primary: #002986;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E5F0FF;
+  --sidebar-accent-foreground: #002986;
+  --sidebar-border: #E5E7EB;
+  --sidebar-ring: #002986;
+
+  --radius: 5px;
 }
 
 @theme inline {
+  /* Neobrutalism tokens */
+  --color-main: var(--main);
+  --color-main-foreground: var(--main-foreground);
   --color-background: var(--background);
-  --color-foreground: var(--text-primary);
+  --color-secondary-background: var(--secondary-background);
+  --color-foreground: var(--foreground);
+  --color-overlay: var(--overlay);
+
+  /* Wisconsin custom */
   --color-surface: var(--surface);
   --color-wi-blue: var(--wi-blue);
   --color-wi-gold: var(--wi-gold);
   --color-wi-blue-light: var(--wi-blue-light);
-  --color-border: var(--border);
   --color-text-secondary: var(--text-secondary);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
+
+  /* shadcn semantic */
+  --color-border: var(--border);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
+  --color-popover-foreground: var(--popover-foreground);
   --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Charts */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Neobrutalism spacing */
+  --spacing-boxShadowX: var(--box-shadow-x);
+  --spacing-boxShadowY: var(--box-shadow-y);
+  --spacing-reverseBoxShadowX: var(--reverse-box-shadow-x);
+  --spacing-reverseBoxShadowY: var(--reverse-box-shadow-y);
+  --spacing-container: 1300px;
+
+  /* Neobrutalism shadows */
+  --shadow-shadow: var(--shadow);
+
+  /* Neobrutalism font weights */
+  --font-weight-base: var(--base-font-weight);
+  --font-weight-heading: var(--heading-font-weight);
+
+  /* Fonts — DM Sans for headings, Public Sans for body, JetBrains Mono for data */
+  --font-sans: var(--font-public-sans);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-heading: var(--font-dm-sans);
+
+  /* Radius */
+  --radius-base: var(--border-radius);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -122,9 +180,19 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-body {
-  color: var(--text-primary);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-base;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
 }
 
 /* Component animations */
@@ -153,50 +221,4 @@ body {
 @keyframes pulseGlow {
   0%, 100% { box-shadow: 0 0 12px rgba(0, 41, 134, 0.2); }
   50% { box-shadow: 0 0 24px rgba(0, 41, 134, 0.4); }
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
 }

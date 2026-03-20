@@ -8,15 +8,12 @@ interface VoiceBarProps {
 
 export function VoiceBar({ isActive, selectedName, onToggle }: VoiceBarProps) {
   return (
-    <div
-      className="flex items-center gap-3 border-t px-4 py-3"
-      style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
-    >
+    <div className="flex items-center gap-3 border-t-2 border-border px-4 py-3 bg-secondary-background">
       {/* Mic button */}
       <button
         onClick={onToggle}
         disabled={!selectedName}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white text-lg transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-base border-2 border-border text-white text-lg transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-shadow"
         style={{
           backgroundColor: isActive ? "var(--status-error)" : "var(--wi-blue)",
           animation: isActive ? "pulseGlow 2s ease infinite" : "none",
@@ -26,14 +23,7 @@ export function VoiceBar({ isActive, selectedName, onToggle }: VoiceBarProps) {
       </button>
 
       {/* Status text */}
-      <div
-        className="flex-1 rounded-lg border px-3 py-2 text-xs font-mono"
-        style={{
-          borderColor: "var(--border)",
-          backgroundColor: "var(--background)",
-          color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
-        }}
-      >
+      <div className="flex-1 rounded-base border-2 border-border px-3 py-2 text-xs font-mono bg-background text-muted-foreground">
         {isActive
           ? "Listening... say \u201Cgo deeper\u201D or ask a follow-up"
           : selectedName

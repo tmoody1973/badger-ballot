@@ -8,25 +8,21 @@ interface EndorsementCardProps {
 
 export function EndorsementCard({ data }: EndorsementCardProps) {
   return (
-    <div className="animate-slide-up rounded-xl border bg-surface p-4 shadow-sm"
-         style={{ borderColor: "var(--border)" }}>
+    <div className="animate-slide-up rounded-base border-2 border-border bg-secondary-background p-4 shadow-shadow">
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <span
-            className="inline-block rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wider font-mono mb-2"
-            style={{ backgroundColor: "var(--party-d-bg)", color: "var(--party-d)" }}
-          >
+          <span className="inline-block rounded-base border-2 border-border px-2 py-0.5 text-[10px] font-bold tracking-wider font-mono mb-2 bg-[var(--party-d-bg)] text-[var(--party-d)]">
             ENDORSEMENT
           </span>
-          <h4 className="text-sm font-bold text-[var(--text-primary)]">{data.endorser}</h4>
-          <p className="mt-0.5 text-[10px] font-mono" style={{ color: "var(--text-secondary)" }}>
+          <h4 className="text-sm font-heading text-foreground">{data.endorser}</h4>
+          <p className="mt-0.5 text-[10px] font-mono text-muted-foreground">
             {data.type}
           </p>
-          <p className="mt-1.5 text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
             {data.context}
           </p>
         </div>
-        <span className="text-[10px] font-mono" style={{ color: "var(--text-secondary)" }}>
+        <span className="text-[10px] font-mono text-muted-foreground">
           for {data.candidate}
         </span>
       </div>

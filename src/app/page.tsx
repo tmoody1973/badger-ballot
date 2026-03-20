@@ -44,22 +44,19 @@ export default function BallotBadger() {
   }
 
   return (
-    <div className="flex h-full flex-col" style={{ backgroundColor: "var(--background)" }}>
+    <div className="flex h-full flex-col bg-background">
       {/* Top bar */}
-      <header
-        className="flex items-center gap-4 border-b px-4 py-2.5 shrink-0"
-        style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
-      >
-        <div className="flex items-baseline gap-2">
-          <span
-            className="text-[9px] font-bold tracking-[0.2em] font-mono"
-            style={{ color: "var(--wi-blue)" }}
-          >
-            WI 2026
-          </span>
-          <h1 className="text-base font-bold text-[var(--text-primary)]">
-            Ballot Badger
-          </h1>
+      <header className="flex items-center gap-4 border-b-2 border-border px-5 py-3 shrink-0 bg-wi-blue-light">
+        <div className="flex items-center gap-3">
+          <img src="/badger-logo.jpg" alt="Ballot Badger" className="h-10 w-10 rounded-base border-2 border-border" />
+          <div className="flex items-baseline gap-2.5">
+            <span className="text-xs font-bold tracking-[0.2em] font-mono text-wi-blue">
+              WI 2026
+            </span>
+            <h1 className="text-xl font-heading text-foreground">
+              Ballot Badger
+            </h1>
+          </div>
         </div>
 
         <div className="flex-1" />
@@ -70,11 +67,11 @@ export default function BallotBadger() {
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className="rounded-full px-3 py-1 text-[10px] font-semibold font-mono transition-all duration-150"
+              className="rounded-base border-2 border-border px-3.5 py-1.5 text-xs font-heading font-mono transition-all duration-150"
               style={{
-                backgroundColor: filter === f.key ? "var(--wi-blue)" : "transparent",
-                color: filter === f.key ? "var(--text-on-blue)" : "var(--text-secondary)",
-                border: `1px solid ${filter === f.key ? "var(--wi-blue)" : "var(--border)"}`,
+                backgroundColor: filter === f.key ? "var(--wi-blue)" : "var(--secondary-background)",
+                color: filter === f.key ? "#FFFFFF" : "var(--foreground)",
+                boxShadow: filter === f.key ? "2px 2px 0px 0px var(--border)" : "none",
               }}
             >
               {f.label}
@@ -86,7 +83,7 @@ export default function BallotBadger() {
       {/* Main split */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: directory */}
-        <aside className="w-72 shrink-0">
+        <aside className="w-80 shrink-0">
           <CandidateDirectory
             candidates={filtered}
             selected={selected}

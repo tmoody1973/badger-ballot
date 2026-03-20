@@ -8,32 +8,25 @@ interface MeasureCardProps {
 
 export function MeasureCard({ data }: MeasureCardProps) {
   return (
-    <div className="animate-slide-up rounded-xl border bg-surface p-5 shadow-sm"
-         style={{ borderColor: "var(--border)" }}>
-      <span
-        className="inline-block rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wider font-mono mb-3"
-        style={{ backgroundColor: "var(--party-measure-bg)", color: "var(--party-measure)" }}
-      >
+    <div className="animate-slide-up rounded-base border-2 border-border bg-secondary-background p-5 shadow-shadow">
+      <span className="inline-block rounded-base border-2 border-border px-2 py-0.5 text-[10px] font-bold tracking-wider font-mono mb-3 bg-[var(--party-measure-bg)] text-[var(--party-measure)]">
         BALLOT MEASURE
       </span>
 
-      <h4 className="text-sm font-bold text-[var(--text-primary)] mb-2">{data.title}</h4>
-      <p className="text-xs leading-relaxed mb-4" style={{ color: "var(--text-secondary)" }}>
+      <h4 className="text-sm font-heading text-foreground mb-2">{data.title}</h4>
+      <p className="text-xs leading-relaxed text-muted-foreground mb-4">
         {data.summary}
       </p>
 
       <div className="grid grid-cols-2 gap-3">
         {/* FOR */}
-        <div
-          className="rounded-lg border p-3"
-          style={{ borderColor: "#BBF7D0", backgroundColor: "#F0FDF4" }}
-        >
-          <p className="text-[10px] font-mono font-bold tracking-wider mb-2" style={{ color: "#166534" }}>
+        <div className="rounded-base border-2 border-border p-3 bg-[#F0FDF4]">
+          <p className="text-[10px] font-mono font-bold tracking-wider mb-2 text-[#166534]">
             FOR
           </p>
           <ul className="space-y-1.5">
             {data.forArguments.map((arg, i) => (
-              <li key={i} className="text-[11px] leading-snug" style={{ color: "#166534" }}>
+              <li key={i} className="text-[11px] leading-snug text-[#166534]">
                 {arg}
               </li>
             ))}
@@ -41,16 +34,13 @@ export function MeasureCard({ data }: MeasureCardProps) {
         </div>
 
         {/* AGAINST */}
-        <div
-          className="rounded-lg border p-3"
-          style={{ borderColor: "#FECACA", backgroundColor: "#FEF2F2" }}
-        >
-          <p className="text-[10px] font-mono font-bold tracking-wider mb-2" style={{ color: "#991B1B" }}>
+        <div className="rounded-base border-2 border-border p-3 bg-[#FEF2F2]">
+          <p className="text-[10px] font-mono font-bold tracking-wider mb-2 text-[#991B1B]">
             AGAINST
           </p>
           <ul className="space-y-1.5">
             {data.againstArguments.map((arg, i) => (
-              <li key={i} className="text-[11px] leading-snug" style={{ color: "#991B1B" }}>
+              <li key={i} className="text-[11px] leading-snug text-[#991B1B]">
                 {arg}
               </li>
             ))}
@@ -59,14 +49,14 @@ export function MeasureCard({ data }: MeasureCardProps) {
       </div>
 
       {(data.sponsors || data.funding) && (
-        <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+        <div className="mt-3 pt-3 border-t-2 border-border">
           {data.sponsors && (
-            <p className="text-[10px] font-mono" style={{ color: "var(--text-secondary)" }}>
+            <p className="text-[10px] font-mono text-muted-foreground">
               Sponsors: {data.sponsors}
             </p>
           )}
           {data.funding && (
-            <p className="text-[10px] font-mono mt-0.5" style={{ color: "var(--text-secondary)" }}>
+            <p className="text-[10px] font-mono mt-0.5 text-muted-foreground">
               Funding: {data.funding}
             </p>
           )}

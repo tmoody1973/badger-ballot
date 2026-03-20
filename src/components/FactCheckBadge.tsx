@@ -26,35 +26,32 @@ export function FactCheckBadge({ data }: FactCheckBadgeProps) {
   const color = getRatingColor(data.rating);
 
   return (
-    <div className="animate-slide-up rounded-xl border bg-surface p-4 shadow-sm"
-         style={{ borderColor: "var(--border)" }}>
-      <div className="flex items-center gap-2 mb-2">
-        <span
-          className="rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wider font-mono"
-          style={{ backgroundColor: "#FEF2F2", color: "var(--status-error)" }}
-        >
+    <div
+      className="animate-slide-up rounded-base border-2 border-border bg-secondary-background p-5 shadow-shadow"
+      role="article"
+      aria-label={`Fact check: ${data.claim}, rated ${data.rating}`}
+    >
+      <div className="flex items-center gap-2.5 mb-3">
+        <span className="rounded-base border-2 border-border px-2.5 py-1 text-xs font-bold tracking-wider font-mono bg-[var(--party-r-bg)] text-[var(--status-error)]">
           FACT CHECK
         </span>
-        <span className="text-[10px] font-mono" style={{ color: "var(--text-secondary)" }}>
+        <span className="text-xs font-mono text-muted-foreground">
           {data.source} &middot; {data.year}
         </span>
       </div>
 
-      <blockquote
-        className="mb-3 border-l-4 pl-3 text-sm italic"
-        style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
-      >
+      <blockquote className="mb-4 border-l-4 border-border pl-4 text-base italic text-foreground leading-relaxed">
         &ldquo;{data.claim}&rdquo;
       </blockquote>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <span
-          className="rounded-md px-2 py-0.5 text-[10px] font-mono font-bold tracking-wider"
+          className="rounded-base border-2 border-border px-3 py-1 text-xs font-mono font-bold tracking-wider"
           style={{ backgroundColor: color.bg, color: color.text }}
         >
           {data.rating.toUpperCase()}
         </span>
-        <span className="text-[10px] font-mono" style={{ color: "var(--text-secondary)" }}>
+        <span className="text-sm font-mono text-muted-foreground">
           &mdash; {data.candidate}
         </span>
       </div>

@@ -249,7 +249,7 @@ export const CANDIDATES: readonly Candidate[] = [
     severity: "medium",
   },
 
-  // STATEWIDE
+  // STATEWIDE — Attorney General
   {
     id: "kaul",
     name: "Josh Kaul",
@@ -257,11 +257,24 @@ export const CANDIDATES: readonly Candidate[] = [
     office: "Attorney General",
     currentRole: "AG (incumbent)",
     type: "incumbent",
-    raceCategory: "statewide",
+    raceCategory: "attorney_general",
     photoUrl: null,
     keyFact: "Running for 3rd term. Key on PFAS, gun safety.",
     findings: 4,
     severity: "low",
+  },
+  {
+    id: "toney",
+    name: "Eric Toney",
+    party: "R",
+    office: "Attorney General",
+    currentRole: "Fond du Lac County DA",
+    type: "challenger",
+    raceCategory: "attorney_general",
+    photoUrl: null,
+    keyFact: "Lost to Kaul in 2022 by 0.6%. Running again.",
+    findings: 3,
+    severity: "medium",
   },
 
   // BALLOT MEASURES (All 3 Certified)
@@ -310,9 +323,9 @@ export const RACE_FILTERS = [
   { key: "all", label: "All" },
   { key: "governor", label: "Governor" },
   { key: "supreme_court", label: "Supreme Court" },
+  { key: "attorney_general", label: "Attorney General" },
   { key: "house", label: "U.S. House" },
   { key: "senate", label: "State Senate" },
-  { key: "statewide", label: "Statewide" },
   { key: "ballot", label: "Ballot" },
 ] as const;
 

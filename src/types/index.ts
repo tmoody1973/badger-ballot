@@ -14,6 +14,7 @@ export type RaceCategory =
   | "house"
   | "senate"
   | "supreme_court"
+  | "attorney_general"
   | "statewide"
   | "ballot";
 
