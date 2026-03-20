@@ -111,12 +111,12 @@ export async function synthesizeReceipts(
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
-    max_tokens: 4000,
+    max_tokens: 2500,
     system: SYNTHESIS_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",
-        content: `Research: ${candidateName} (type: ${candidateType})\n\nSearch results:\n${JSON.stringify(searchResults, null, 2)}`,
+        content: `Research: ${candidateName} (type: ${candidateType})\n\nSearch results (summarized):\n${JSON.stringify(searchResults, null, 1).slice(0, 12000)}`,
       },
     ],
   });
