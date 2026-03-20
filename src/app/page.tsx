@@ -221,12 +221,49 @@ export default function BallotBadger() {
     setComponents([]);
   }, []);
 
+  // When voice agent detects a candidate, trigger the full visual search
+  const handleCandidateResearch = useCallback(async (candidateId: string) => {
+    const candidate = CANDIDATES.find((c) => c.id === candidateId);
+    if (!candidate) return;
+
+    setSelected(candidateId);
+    setIsLoading(true);
+    setStatusText("Digging into the records...");
+
+    try {
+      const response = await fetch("/api/receipts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidate: candidateId }),
+      });
+      const data: ReceiptsResponse = await response.json();
+      if (!data.error) {
+        const newComponents = buildComponentsFromResponse(data, candidate);
+        // Don't replace candidate card — it was already added by show_candidate
+        for (let i = 1; i < newComponents.length; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 600));
+          setComponents((prev) => [...prev, newComponents[i]]);
+          if (mainRef.current) {
+            mainRef.current.scrollTop = mainRef.current.scrollHeight;
+          }
+        }
+        const sourceCount = data.source_count ?? 0;
+        setStatusText(`Found ${sourceCount} sources. Say "go deeper" or ask a follow-up.`);
+      }
+    } catch {
+      // Voice is still running — search failed silently
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const voiceAgent = useVoiceAgent({
     onComponentAdd: handleComponentAdd,
     onStatusChange: handleVoiceStatusChange,
     onSelectCandidate: handleVoiceSelectCandidate,
     onSetFilter: handleVoiceSetFilter,
     onClearResults: handleVoiceClearResults,
+    onCandidateResearch: handleCandidateResearch,
     selectedCandidate,
   });
 

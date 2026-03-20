@@ -11,6 +11,7 @@ interface UseVoiceAgentOptions {
   onSelectCandidate: (id: string) => void;
   onSetFilter: (filter: string) => void;
   onClearResults: () => void;
+  onCandidateResearch: (candidateId: string) => void;
   selectedCandidate: Candidate | null;
 }
 
@@ -20,6 +21,7 @@ export function useVoiceAgent({
   onSelectCandidate,
   onSetFilter,
   onClearResults,
+  onCandidateResearch,
   selectedCandidate,
 }: UseVoiceAgentOptions) {
   const [isConnected, setIsConnected] = useState(false);
@@ -64,6 +66,8 @@ export function useVoiceAgent({
 
         if (match) {
           onComponentAdd({ type: "candidate", data: match });
+          // Trigger the full search flow — renders digging progress + results
+          onCandidateResearch(match.id);
         } else {
           onComponentAdd({
             type: "candidate",
