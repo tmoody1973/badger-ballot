@@ -9,6 +9,7 @@ import { EndorsementCard } from "./EndorsementCard";
 import { MeasureCard } from "./MeasureCard";
 import { NewsHeadline } from "./NewsHeadline";
 import { PlatformCard } from "./PlatformCard";
+import { FundraisingChart } from "./FundraisingChart";
 
 interface ComponentRendererProps {
   readonly components: readonly RenderedComponent[];
@@ -46,6 +47,7 @@ export function ComponentRenderer({ components }: ComponentRendererProps) {
   const endorsements = components.filter((c) => c.type === "endorsement");
   const platform = components.filter((c) => c.type === "platform");
   const measures = components.filter((c) => c.type === "measure");
+  const charts = components.filter((c) => c.type === "fundraisingChart");
 
   return (
     <div className="p-5 max-w-3xl mx-auto">
@@ -114,6 +116,17 @@ export function ComponentRenderer({ components }: ComponentRendererProps) {
           <div className="space-y-3">
             {endorsements.map((component, i) => (
               <EndorsementCard key={`endorsement-${i}`} data={component.data} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {charts.length > 0 && (
+        <>
+          <SectionHeader label="Fundraising" icon={"\u{1F4CA}"} />
+          <div className="space-y-3">
+            {charts.map((component, i) => (
+              <FundraisingChart key={`chart-${i}`} data={component.data} />
             ))}
           </div>
         </>

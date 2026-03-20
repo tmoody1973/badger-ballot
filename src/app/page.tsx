@@ -99,6 +99,31 @@ function buildComponentsFromResponse(
         sourceUrl: response.donors.sourceUrl,
       },
     });
+
+    // Auto-generate a fundraising chart from donor data
+    const chartBars = response.donors.donors
+      .filter((d) => d.amount && d.amount.startsWith("$"))
+      .map((d) => ({
+        name: d.name,
+        amount: parseInt(d.amount.replace(/[$,]/g, ""), 10) || 0,
+        party: candidateData.party === "R" ? "R" : candidateData.party === "D" ? "D" : "NP",
+        label: d.amount,
+      }))
+      .filter((b) => b.amount > 0)
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 8);
+
+    if (chartBars.length >= 2) {
+      result.push({
+        type: "fundraisingChart",
+        data: {
+          title: `Top Donors — ${candidateData.name}`,
+          bars: chartBars,
+          source: response.donors.source,
+          sourceUrl: response.donors.sourceUrl,
+        },
+      });
+    }
   }
 
   if (response.factChecks) {
