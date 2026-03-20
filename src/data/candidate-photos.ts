@@ -15,6 +15,8 @@ export const CANDIDATE_PHOTOS: Record<string, string> = {
   // Governor — Republicans
   tiffany: "/candidates/Tom_Tiffany.jpg",
 
+  manske: "/candidates/andy-manske.webp",
+
   // Supreme Court
   taylor: "https://upload.wikimedia.org/wikipedia/commons/a/af/Justice_Chris_Taylor_2026_portrait_%28cropped%29.jpg",
 
