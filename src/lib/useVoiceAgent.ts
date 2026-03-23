@@ -1,7 +1,7 @@
 "use client";
 
 import { useConversation } from "@elevenlabs/react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 import type { RenderedComponent, Candidate } from "@/types";
 import { CANDIDATES } from "@/data/candidates";
 
@@ -25,6 +25,22 @@ export function useVoiceAgent({
   selectedCandidate,
 }: UseVoiceAgentOptions) {
   const [isConnected, setIsConnected] = useState(false);
+  const researchTriggeredRef = useRef<string | null>(null);
+
+  // Helper: when any client tool mentions a candidate, ensure research is running
+  const ensureResearch = useCallback((candidateName: string) => {
+    if (!candidateName) return;
+    const match = CANDIDATES.find(
+      (c) =>
+        c.name.toLowerCase() === candidateName.toLowerCase() ||
+        candidateName.toLowerCase().includes(c.name.split(" ").pop()?.toLowerCase() ?? ""),
+    );
+    if (match && researchTriggeredRef.current !== match.id) {
+      researchTriggeredRef.current = match.id;
+      onCandidateResearch(match.id);
+      onSelectCandidate(match.id);
+    }
+  }, [onCandidateResearch, onSelectCandidate]);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -33,6 +49,7 @@ export function useVoiceAgent({
     },
     onDisconnect: () => {
       setIsConnected(false);
+      researchTriggeredRef.current = null;
       onStatusChange("Disconnected.");
     },
     onError: (error) => {
@@ -40,7 +57,17 @@ export function useVoiceAgent({
       onStatusChange("Voice error. Try again.");
     },
     onMessage: (message) => {
-      console.log("Agent message:", JSON.stringify(message).slice(0, 200));
+      // Detect candidate names in agent speech and auto-trigger search
+      const msgStr = JSON.stringify(message);
+      const msgLower = msgStr.toLowerCase();
+
+      for (const c of CANDIDATES) {
+        const lastName = c.name.split(" ").pop()?.toLowerCase() ?? "";
+        if (lastName.length > 3 && msgLower.includes(lastName)) {
+          ensureResearch(c.name);
+          break;
+        }
+      }
     },
     onUnhandledClientToolCall: (toolCall) => {
       console.warn("Unhandled client tool call:", JSON.stringify(toolCall));
@@ -98,6 +125,7 @@ export function useVoiceAgent({
         sourceUrl?: string;
         candidate: string;
       }) => {
+        ensureResearch(params.candidate);
         onComponentAdd({
           type: "vote",
           data: {
@@ -120,6 +148,7 @@ export function useVoiceAgent({
         source: string;
         sourceUrl?: string;
       }) => {
+        ensureResearch(params.candidate);
         onComponentAdd({
           type: "donors",
           data: {
@@ -141,6 +170,7 @@ export function useVoiceAgent({
         year: string;
         candidate: string;
       }) => {
+        ensureResearch(params.candidate);
         onComponentAdd({
           type: "factCheck",
           data: {
@@ -162,6 +192,7 @@ export function useVoiceAgent({
         sourceUrl?: string;
         candidate: string;
       }) => {
+        ensureResearch(params.candidate);
         onComponentAdd({
           type: "endorsement",
           data: {
