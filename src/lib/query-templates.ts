@@ -97,9 +97,19 @@ export function getQueryTemplates(
 
 // Known finance data URLs for targeted Firecrawl scrapes
 export const KNOWN_FINANCE_URLS: Record<string, string> = {
-  // Supreme Court
-  taylor: "https://www.wisdc.org/follow-the-money/151-campaign-finance-profiles-2026/7943-campaign-2026-supreme-court",
-  lazar: "https://www.wisdc.org/follow-the-money/151-campaign-finance-profiles-2026/7943-campaign-2026-supreme-court",
+  // Transparency USA — individual donor tables (Firecrawl can scrape these)
+  barnes: "https://www.transparencyusa.org/wi/candidate/mandela-barnes/contributors",
+  rodriguez: "https://www.transparencyusa.org/wi/candidate/sara-rodriguez/contributors",
+  roys: "https://www.transparencyusa.org/wi/candidate/kelda-roys/contributors",
+  hong: "https://www.transparencyusa.org/wi/candidate/francesca-hong/contributors",
+  crowley: "https://www.transparencyusa.org/wi/candidate/david-crowley/contributors",
+  brennan: "https://www.transparencyusa.org/wi/candidate/joel-brennan/contributors",
+  hughes: "https://www.transparencyusa.org/wi/candidate/missy-hughes/contributors",
+  tiffany: "https://www.transparencyusa.org/wi/candidate/tom-tiffany/contributors",
+  kaul: "https://www.transparencyusa.org/wi/candidate/josh-kaul/contributors",
+  toney: "https://www.transparencyusa.org/wi/candidate/eric-toney/contributors",
+  taylor: "https://www.transparencyusa.org/wi/candidate/chris-taylor/contributors",
+  lazar: "https://www.transparencyusa.org/wi/candidate/maria-lazar/contributors",
 };
 
 // Deep dive queries — different for federal vs state candidates

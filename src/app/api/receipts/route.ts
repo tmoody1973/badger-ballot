@@ -1,50 +1,7 @@
 import { NextResponse } from "next/server";
-import { getFirecrawl } from "@/lib/firecrawl";
-import { getQueryTemplates, KNOWN_FINANCE_URLS } from "@/lib/query-templates";
-import { synthesizeReceipts } from "@/lib/synthesis";
 import { CANDIDATES } from "@/data/candidates";
 import type { CandidateType } from "@/types";
-
-interface SearchSnippet {
-  title: string;
-  url: string;
-  description: string;
-}
-
-// Extract article body from markdown, skipping navigation/ads/footers
-function extractArticleBody(markdown: string): string {
-  // Remove common noise patterns
-  let clean = markdown
-    .replace(/!\[.*?\]\(.*?\)/g, "") // Remove images
-    .replace(/\[.*?Skip.*?\]\(.*?\)/g, "") // Skip links
-    .replace(/\[.*?Subscribe.*?\]\(.*?\)/gi, "") // Subscribe CTAs
-    .replace(/\[.*?Newsletter.*?\]\(.*?\)/gi, "") // Newsletter CTAs
-    .replace(/\[.*?Sign up.*?\]\(.*?\)/gi, "") // Sign up CTAs
-    .replace(/#{1,6}\s*(?:Related|Share|Follow|Tags|Categories|Comments|About|Contact)\b[^\n]*/gi, "") // Section headers
-    .replace(/\n{3,}/g, "\n\n") // Collapse multiple newlines
-    .trim();
-
-  // Find the substantive content — look for paragraphs with dollar signs or candidate names
-  const lines = clean.split("\n");
-  const substantiveLines: string[] = [];
-  let foundContent = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    // Skip short lines (navigation, buttons)
-    if (trimmed.length < 30 && !trimmed.startsWith("#")) continue;
-    // Look for lines with dollar amounts or political content
-    if (/\$[\d,]+|raised|donated|contributed|campaign|candidate|governor|senator|endorsement/i.test(trimmed)) {
-      foundContent = true;
-    }
-    if (foundContent) {
-      substantiveLines.push(trimmed);
-    }
-  }
-
-  const body = substantiveLines.join("\n").slice(0, 4000);
-  return body || clean.slice(0, 3000);
-}
+import { fireplexitySearch } from "@/lib/fireplexity";
 
 export async function POST(req: Request) {
   try {
@@ -66,67 +23,13 @@ export async function POST(req: Request) {
     const candidateType: CandidateType = candidateData?.type ?? "challenger";
     const candidateName = candidateData?.name ?? candidate;
 
-    const templates = getQueryTemplates(candidateType, candidateName, topic);
-    const firecrawl = getFirecrawl();
-
-    // Run all searches in parallel — snippets only for speed (no scrapeOptions)
-    // Full article scraping is reserved for /api/finance and /api/deep-dive
-    const allResults = await Promise.all(
-      templates.queries.map(async (sq) => {
-        try {
-          const options: Record<string, unknown> = { limit: sq.limit };
-          if (sq.tbs) {
-            options.tbs = sq.tbs;
-          }
-          const result = await firecrawl.search(sq.query, options);
-          const webResults = result.web ?? [];
-          return webResults.map((r): SearchSnippet => ({
-            title: ("title" in r ? r.title : "") ?? "",
-            url: ("url" in r ? r.url : "") ?? "",
-            description: ("description" in r ? r.description : "") ?? "",
-          }));
-        } catch (err) {
-          console.error(`Firecrawl error for "${sq.query}":`, err instanceof Error ? err.message : err);
-          return [];
-        }
-      }),
-    );
-
-    // Deduplicate by URL across all results
-    const seen = new Set<string>();
-    const deduped: SearchSnippet[] = [];
-    for (const batch of allResults) {
-      for (const r of batch) {
-        if (r.url && !seen.has(r.url)) {
-          seen.add(r.url);
-          deduped.push(r);
-        }
-      }
-    }
-
-    // Split into categories for synthesis (first 3 queries map to official/statements/factchecks)
-    const official = allResults[0] ?? [];
-    const donors = allResults[1] ?? [];
-    const factchecks = allResults[2] ?? [];
-    const news = allResults[3] ?? [];
-    const platform = allResults[4] ?? [];
-
-    const searchResults = {
-      official: [...official, ...platform],
-      statements: [...donors, ...news],
-      factchecks,
-    };
-
-    const synthesis = await synthesizeReceipts(
-      candidateName,
-      candidateType,
-      searchResults,
-    );
+    // Fireplexity pipeline: Firecrawl v2 search + Groq/Claude synthesis
+    const result = await fireplexitySearch(candidateName, candidateType, topic);
 
     return NextResponse.json({
-      ...synthesis,
-      source_count: deduped.length,
-      sources: deduped.map((r) => ({ ...r, tier: "search" })),
+      ...result.structured,
+      source_count: result.sourceCount,
+      sources: result.sources,
       pass: 1,
     });
   } catch (error) {
