@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
-import FirecrawlApp from "@mendable/firecrawl-js";
 
-const TOOLS: Record<string, { url: string; extractPrompt: string }> = {
+const TOOLS_CONFIG = {
   "polling-place": {
-    url: "https://myvote.wi.gov/en-US/FindMyPollingPlace",
-    extractPrompt: "Tell me the polling place name, address, hours, and ward number. Format clearly with labels.",
+    prompt: (address: string, city: string, zip: string) =>
+      `Go to https://myvote.wi.gov/en-US/FindMyPollingPlace. Fill the Street Address field with "${address}". Fill the City field with "${city}". Fill the Zip field with "${zip}". Click the Search button. Wait for results. Tell me the polling place name, full address, polling hours, and ward number. Format with clear labels.`,
   },
   "ballot": {
-    url: "https://myvote.wi.gov/en-US/PreviewMyBallot",
-    extractPrompt: "Wait for the sample ballot to fully load. You should see a heading that says SAMPLE BALLOT FOR MY NEXT ELECTION. List every race showing the office name and all candidate names. Include referendums if any. Format as a numbered list with candidates under each race.",
+    prompt: (address: string, city: string, zip: string) =>
+      `Go to https://myvote.wi.gov/en-US/PreviewMyBallot. Fill the Street Address field with "${address}". Fill the City field with "${city}". Fill the Zip field with "${zip}". Click the Search button. Wait for the sample ballot to fully load — you should see "SAMPLE BALLOT FOR MY NEXT ELECTION". List every race showing the office name and ALL candidate names. Format as a numbered list.`,
   },
   "registration": {
-    url: "https://myvote.wi.gov/en-US/RegisterToVote",
-    extractPrompt: "Tell me the voter registration status and any voter information shown.",
+    prompt: (address: string, city: string, zip: string) =>
+      `Go to https://myvote.wi.gov/en-US/RegisterToVote and tell me how to register to vote at ${address}, ${city}, WI ${zip}. Include registration deadlines and requirements.`,
   },
 };
 
@@ -28,74 +27,62 @@ export async function POST(req: Request) {
 
     const resolvedCity = city || "Milwaukee";
     const resolvedZip = zip || "";
-    const tool = action ?? "polling-place";
-    const config = TOOLS[tool] ?? TOOLS["polling-place"];
+    const tool = (action ?? "polling-place") as keyof typeof TOOLS_CONFIG;
+    const config = TOOLS_CONFIG[tool] ?? TOOLS_CONFIG["polling-place"];
 
-    // Create Firecrawl client with extended timeout (55 seconds)
-    const firecrawl = new FirecrawlApp({
-      apiKey: process.env.FIRECRAWL_API_KEY!,
-      timeoutMs: 55000,
-    } as ConstructorParameters<typeof FirecrawlApp>[0]);
+    const groqKey = process.env.GROQ_API_KEY;
+    const firecrawlKey = process.env.FIRECRAWL_API_KEY;
 
-    // Step 1: Scrape via direct API call to bypass SDK 5s timeout
-    console.log(`[voter-info] Scraping ${config.url} via direct API...`);
-    const scrapeResponse = await fetch("https://api.firecrawl.dev/v2/scrape", {
+    if (!groqKey || !firecrawlKey) {
+      return NextResponse.json({ success: false, error: "Missing API keys" });
+    }
+
+    const prompt = config.prompt(address, resolvedCity, resolvedZip);
+
+    console.log(`[voter-info] Using Groq + Firecrawl MCP for ${tool}`);
+
+    // Groq Responses API with Firecrawl MCP — handles scrape+interact internally
+    const response = await fetch("https://api.groq.com/api/openai/v1/responses", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+        "Authorization": `Bearer ${groqKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        url: config.url,
-        formats: ["markdown"],
-        timeout: 30000,
-        waitFor: 5000,
+        model: "openai/gpt-oss-120b",
+        input: prompt,
+        tools: [
+          {
+            server_label: "firecrawl",
+            server_url: `https://mcp.firecrawl.dev/${firecrawlKey}/v2/mcp`,
+            type: "mcp",
+            require_approval: "never",
+          },
+        ],
+        temperature: 0.1,
+        top_p: 0.4,
       }),
-      signal: AbortSignal.timeout(35000),
-    });
-
-    const scrapeResult = await scrapeResponse.json();
-    const scrapeId = scrapeResult?.data?.metadata?.scrapeId ?? scrapeResult?.metadata?.scrapeId ?? scrapeResult?.scrapeId;
-    console.log(`[voter-info] Scrape response keys: ${JSON.stringify(Object.keys(scrapeResult))}, scrapeId: ${scrapeId}`);
-    if (!scrapeId) {
-      return NextResponse.json({
-        success: false,
-        error: "Could not start browser session for myvote.wi.gov",
-        rawContent: "",
-        links: { pollingPlace: config.url },
-      });
-    }
-
-    console.log(`[voter-info] ScrapeId: ${scrapeId}, starting interact...`);
-
-    // Step 2: Call interact API directly to bypass SDK 5s timeout
-    const fillPrompt = `Fill the Street Address field with "${address}", the City field with "${resolvedCity}", and the Zip field with "${resolvedZip}". Click the Search button. Wait for the results page to load. Then ${config.extractPrompt.toLowerCase()}`;
-
-    console.log(`[voter-info] Calling interact API directly...`);
-    const interactResponse = await fetch(`https://api.firecrawl.dev/v2/scrape/${scrapeId}/interact`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.FIRECRAWL_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ prompt: fillPrompt, timeout: 90 }),
       signal: AbortSignal.timeout(110000),
     });
 
-    const interactResult = await interactResponse.json();
-    const output = interactResult?.output ?? "";
-    const stdout = interactResult?.stdout ?? "";
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[voter-info] Groq error: ${response.status} ${errorText.slice(0, 300)}`);
+      return NextResponse.json({
+        success: false,
+        error: `Groq API error: ${response.status}`,
+        rawContent: "",
+        links: {
+          pollingPlace: "https://myvote.wi.gov/en-US/FindMyPollingPlace",
+          ballot: "https://myvote.wi.gov/en-US/PreviewMyBallot",
+        },
+      });
+    }
 
-    console.log(`[voter-info] Done. Output: ${output.length} chars, Stdout: ${stdout.length} chars`);
+    const result = await response.json();
+    const rawContent = result.output_text ?? result.output ?? "";
 
-    // Stop session
-    await fetch(`https://api.firecrawl.dev/v2/scrape/${scrapeId}/interact`, {
-      method: "DELETE",
-      headers: { "Authorization": `Bearer ${process.env.FIRECRAWL_API_KEY}` },
-    }).catch(() => {});
-
-    // Use output (AI answer) if available, otherwise use stdout
-    const rawContent = output || (stdout.length < 2000 ? stdout : "");
+    console.log(`[voter-info] Got ${typeof rawContent === 'string' ? rawContent.length : 0} chars from Groq+Firecrawl`);
 
     return NextResponse.json({
       success: true,
@@ -103,8 +90,10 @@ export async function POST(req: Request) {
       city: resolvedCity,
       zip: resolvedZip,
       tool,
-      sourceUrl: config.url,
-      rawContent,
+      sourceUrl: tool === "ballot"
+        ? "https://myvote.wi.gov/en-US/PreviewMyBallot"
+        : "https://myvote.wi.gov/en-US/FindMyPollingPlace",
+      rawContent: typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent),
       nextElection: "Tuesday, April 7, 2026 — Spring Election",
       daysUntilElection: Math.max(0, Math.ceil((new Date("2026-04-07").getTime() - Date.now()) / (1000 * 60 * 60 * 24))),
       links: {
