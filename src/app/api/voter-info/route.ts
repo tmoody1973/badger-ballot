@@ -3,15 +3,15 @@ import FirecrawlApp from "@mendable/firecrawl-js";
 
 const TOOLS: Record<string, { url: string; extractPrompt: string }> = {
   "polling-place": {
-    url: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
+    url: "https://myvote.wi.gov/en-US/FindMyPollingPlace",
     extractPrompt: "Tell me the polling place name, address, hours, and ward number. Format clearly with labels.",
   },
   "ballot": {
-    url: "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
+    url: "https://myvote.wi.gov/en-US/PreviewMyBallot",
     extractPrompt: "Wait for the sample ballot to fully load. You should see a heading that says SAMPLE BALLOT FOR MY NEXT ELECTION. List every race showing the office name and all candidate names. Include referendums if any. Format as a numbered list with candidates under each race.",
   },
   "registration": {
-    url: "https://myvote.wi.gov/en-us/My-Voter-Info",
+    url: "https://myvote.wi.gov/en-US/RegisterToVote",
     extractPrompt: "Tell me the voter registration status and any voter information shown.",
   },
 };
@@ -108,11 +108,11 @@ export async function POST(req: Request) {
       nextElection: "Tuesday, April 7, 2026 — Spring Election",
       daysUntilElection: Math.max(0, Math.ceil((new Date("2026-04-07").getTime() - Date.now()) / (1000 * 60 * 60 * 24))),
       links: {
-        pollingPlace: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
-        ballot: "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
-        registration: "https://myvote.wi.gov/en-us/My-Voter-Info",
-        absentee: "https://myvote.wi.gov/en-us/Vote-Absentee-By-Mail",
-        trackBallot: "https://myvote.wi.gov/en-us/Track-My-Ballot",
+        pollingPlace: "https://myvote.wi.gov/en-US/FindMyPollingPlace",
+        ballot: "https://myvote.wi.gov/en-US/PreviewMyBallot",
+        registration: "https://myvote.wi.gov/en-US/RegisterToVote",
+        absentee: "https://myvote.wi.gov/en-US/VoteAbsenteeByMail",
+        trackBallot: "https://myvote.wi.gov/en-US/TrackMyBallot",
       },
     });
   } catch (error) {
@@ -125,9 +125,9 @@ export async function POST(req: Request) {
       rawContent: "",
       nextElection: "Tuesday, April 7, 2026 — Spring Election",
       links: {
-        pollingPlace: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
-        ballot: "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
-        registration: "https://myvote.wi.gov/en-us/My-Voter-Info",
+        pollingPlace: "https://myvote.wi.gov/en-US/FindMyPollingPlace",
+        ballot: "https://myvote.wi.gov/en-US/PreviewMyBallot",
+        registration: "https://myvote.wi.gov/en-US/RegisterToVote",
       },
     });
   }
