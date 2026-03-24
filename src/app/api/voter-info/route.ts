@@ -1,25 +1,22 @@
 import { NextResponse } from "next/server";
 import FirecrawlApp from "@mendable/firecrawl-js";
 
-const TOOLS: Record<string, { url: string; fillPrompt: string; extractPrompt: string }> = {
+const TOOLS: Record<string, { url: string; prompt: string }> = {
   "polling-place": {
     url: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
-    fillPrompt: (address: string, city: string, zip: string) =>
-      `Fill the Street Address field with "${address}", the City field with "${city}", and the Zip field with "${zip}". Then click the Search button.`,
-    extractPrompt: `Look at the current page. Tell me: 1) The name of the polling place, 2) The polling place address, 3) The polling place hours, 4) The ward number. Format your answer clearly with labels.`,
-  } as unknown as { url: string; fillPrompt: string; extractPrompt: string },
+    prompt: (address: string, city: string, zip: string) =>
+      `Go to https://myvote.wi.gov/en-us/Find-My-Polling-Place. Fill the Street Address field with "${address}", City with "${city}", Zip with "${zip}". Click the Search button. Wait for results. Tell me the polling place name, address, hours, and ward number.`,
+  } as unknown as { url: string; prompt: string },
   "ballot": {
     url: "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
-    fillPrompt: (address: string, city: string, zip: string) =>
-      `Fill the Street Address field with "${address}", the City field with "${city}", and the Zip field with "${zip}". Then click the Search button.`,
-    extractPrompt: `Look at the current page. List every race and referendum on this ballot. For each race, tell me the office name and all candidates. For referendums, tell me the question. Format as a clear list.`,
-  } as unknown as { url: string; fillPrompt: string; extractPrompt: string },
+    prompt: (address: string, city: string, zip: string) =>
+      `Go to https://myvote.wi.gov/en-us/Whats-On-My-Ballot. Fill the Street Address field with "${address}", City with "${city}", Zip with "${zip}". Click the Search button. Wait for results. List every race and candidate on this ballot.`,
+  } as unknown as { url: string; prompt: string },
   "registration": {
     url: "https://myvote.wi.gov/en-us/My-Voter-Info",
-    fillPrompt: (address: string, city: string, zip: string) =>
-      `This is a voter info lookup page. Fill in the name or address fields with "${address}, ${city}, ${zip}" and search. If it asks for first/last name, try searching by address instead.`,
-    extractPrompt: `Look at the current page. Tell me if the voter is registered, their registration status, and any other voter information shown. Format clearly.`,
-  } as unknown as { url: string; fillPrompt: string; extractPrompt: string },
+    prompt: (address: string, city: string, zip: string) =>
+      `Go to https://myvote.wi.gov/en-us/My-Voter-Info. Search for voter at address "${address}, ${city}, WI ${zip}". Tell me the voter registration status.`,
+  } as unknown as { url: string; prompt: string },
 };
 
 export async function POST(req: Request) {
@@ -33,71 +30,78 @@ export async function POST(req: Request) {
     const resolvedCity = city || "Milwaukee";
     const resolvedZip = zip || "";
     const tool = action ?? "polling-place";
-
     const config = TOOLS[tool] ?? TOOLS["polling-place"];
+
     const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY! });
 
-    // Step 1: Scrape the page to get a scrapeId
-    const scrapeResult = await firecrawl.scrape(config.url, {
-      formats: ["markdown"],
-      timeout: 30000,
-      waitFor: 5000,
-    });
-    const scrapeId = (scrapeResult as unknown as { metadata?: { scrapeId?: string } }).metadata?.scrapeId;
+    // Create a browser session
+    const session = await firecrawl.browser({ ttl: 120, activityTtl: 60 });
+    const sessionId = session.id;
 
-    if (!scrapeId) {
+    if (!sessionId) {
+      return NextResponse.json({ success: false, error: "Browser session failed", rawContent: "" });
+    }
+
+    console.log(`[voter-info] Browser session: ${sessionId}, tool: ${tool}`);
+
+    try {
+      // Build the prompt
+      const promptFn = config.prompt as unknown as (a: string, c: string, z: string) => string;
+      const prompt = promptFn(address, resolvedCity, resolvedZip);
+
+      // Execute with node — navigate, fill, submit, extract in one go
+      const result = await firecrawl.browserExecute(sessionId, {
+        language: "node",
+        code: `
+          // Navigate
+          await page.goto("${config.url}", { waitUntil: "networkidle" });
+          await page.waitForTimeout(3000);
+
+          // Fill form
+          await page.fill("#SearchStreet", ${JSON.stringify(address)});
+          await page.fill("#SearchCity", ${JSON.stringify(resolvedCity)});
+          await page.fill("#SearchZip", ${JSON.stringify(resolvedZip)});
+          await page.waitForTimeout(500);
+
+          // Submit
+          await page.click("#SearchAddressButton");
+          await page.waitForNavigation({ waitUntil: "networkidle", timeout: 15000 }).catch(() => {});
+          await page.waitForTimeout(5000);
+
+          // Extract visible text
+          const text = await page.evaluate(() => {
+            const main = document.querySelector("main") || document.body;
+            return main.innerText;
+          });
+
+          console.log(text.substring(0, 4000));
+        `,
+      });
+
+      const rawContent = result.stdout ?? result.result ?? "";
+      console.log(`[voter-info] Got ${typeof rawContent === 'string' ? rawContent.length : 0} chars`);
+
       return NextResponse.json({
-        success: false,
-        error: "Could not create browser session",
-        rawContent: "",
+        success: true,
+        address,
+        city: resolvedCity,
+        zip: resolvedZip,
+        tool,
+        sourceUrl: config.url,
+        rawContent: typeof rawContent === "string" ? rawContent.slice(0, 4000) : String(rawContent).slice(0, 4000),
+        nextElection: "Tuesday, April 7, 2026 — Spring Election",
+        daysUntilElection: Math.max(0, Math.ceil((new Date("2026-04-07").getTime() - Date.now()) / (1000 * 60 * 60 * 24))),
         links: {
           pollingPlace: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
           ballot: "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
           registration: "https://myvote.wi.gov/en-us/My-Voter-Info",
+          absentee: "https://myvote.wi.gov/en-us/Vote-Absentee-By-Mail",
+          trackBallot: "https://myvote.wi.gov/en-us/Track-My-Ballot",
         },
       });
+    } finally {
+      await firecrawl.deleteBrowser(sessionId).catch(() => {});
     }
-
-    console.log(`[voter-info] Tool: ${tool}, ScrapeId: ${scrapeId}`);
-
-    // Step 2: Single interact call — fill + submit + extract (must fit in 60s)
-    const fillFn = config.fillPrompt as unknown as (a: string, c: string, z: string) => string;
-    const combinedPrompt = `${fillFn(address, resolvedCity, resolvedZip)} After the results load, ${config.extractPrompt.toLowerCase()}`;
-
-    console.log(`[voter-info] Running combined prompt for ${tool}`);
-
-    const interactResult = await firecrawl.interact(scrapeId, {
-      prompt: combinedPrompt,
-      timeout: 55,
-    });
-
-    const output = (interactResult as unknown as { output?: string }).output ?? "";
-    const stdout = (interactResult as unknown as { stdout?: string }).stdout ?? "";
-    const rawContent = output || stdout || "";
-
-    console.log(`[voter-info] Result: output=${output.length} chars, stdout=${stdout.length} chars`);
-
-    // Stop session
-    await firecrawl.stopInteraction(scrapeId).catch(() => {});
-
-    return NextResponse.json({
-      success: true,
-      address,
-      city: resolvedCity,
-      zip: resolvedZip,
-      tool,
-      sourceUrl: config.url,
-      rawContent,
-      nextElection: "Tuesday, April 7, 2026 — Spring Election",
-      daysUntilElection: Math.max(0, Math.ceil((new Date("2026-04-07").getTime() - Date.now()) / (1000 * 60 * 60 * 24))),
-      links: {
-        pollingPlace: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
-        ballot: "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
-        registration: "https://myvote.wi.gov/en-us/My-Voter-Info",
-        absentee: "https://myvote.wi.gov/en-us/Vote-Absentee-By-Mail",
-        trackBallot: "https://myvote.wi.gov/en-us/Track-My-Ballot",
-      },
-    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[voter-info] Error:", message);
