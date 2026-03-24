@@ -38,7 +38,11 @@ export async function POST(req: Request) {
     const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY! });
 
     // Step 1: Scrape the page to get a scrapeId
-    const scrapeResult = await firecrawl.scrape(config.url, { formats: ["markdown"] });
+    const scrapeResult = await firecrawl.scrape(config.url, {
+      formats: ["markdown"],
+      timeout: 30000,
+      waitFor: 5000,
+    });
     const scrapeId = (scrapeResult as unknown as { metadata?: { scrapeId?: string } }).metadata?.scrapeId;
 
     if (!scrapeId) {
