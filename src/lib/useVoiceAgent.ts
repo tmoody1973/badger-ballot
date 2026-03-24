@@ -257,10 +257,12 @@ export function useVoiceAgent({
         onStatusChange(`${labels[action] ?? "Looking up voter info"} for ${params.address}... This takes about 30 seconds.`);
 
         // Fire and forget — don't await, return immediately
+        // Use AbortSignal for 2-minute timeout (ballot takes ~70 seconds)
         fetch("/api/voter-info", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(params),
+          signal: AbortSignal.timeout(120000),
         })
           .then((res) => res.json())
           .then((data) => {
