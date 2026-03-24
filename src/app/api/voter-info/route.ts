@@ -28,34 +28,47 @@ export async function POST(req: Request) {
     const playwrightCode = `
       await page.goto('${targetUrl}');
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
-
-      // myvote.wi.gov has specific form field IDs
-      // #SearchStreet, #SearchCity, #SearchZip are the key fields
-      await page.fill('#SearchStreet', '${escapedAddress}');
-      await page.fill('#SearchCity', '${escapedCity || "Milwaukee"}');
-      await page.fill('#SearchZip', '${escapedZip || ""}');
-
-      await page.waitForTimeout(500);
-
-      // Submit the form and wait for navigation (kernel.sh docs pattern)
-      await Promise.all([
-        page.waitForNavigation({ timeout: 15000 }).catch(() => {}),
-        page.click('button[type="submit"], input[type="submit"]'),
-      ]);
-
-      // Extra wait for any AJAX content
       await page.waitForTimeout(3000);
 
-      // Extract visible text from the results page
+      // Fill form fields using JavaScript directly for reliability
+      await page.evaluate((addr, city, zip) => {
+        const streetEl = document.getElementById('SearchStreet');
+        const cityEl = document.getElementById('SearchCity');
+        const zipEl = document.getElementById('SearchZip');
+        if (streetEl) { (streetEl as HTMLInputElement).value = addr; streetEl.dispatchEvent(new Event('input', {bubbles: true})); }
+        if (cityEl) { (cityEl as HTMLInputElement).value = city; cityEl.dispatchEvent(new Event('input', {bubbles: true})); }
+        if (zipEl) { (zipEl as HTMLInputElement).value = zip; zipEl.dispatchEvent(new Event('input', {bubbles: true})); }
+      }, '${escapedAddress}', '${escapedCity || "Milwaukee"}', '${escapedZip || "53206"}');
+
+      await page.waitForTimeout(1000);
+
+      // Submit the form via JavaScript
+      await page.evaluate(() => {
+        const form = document.getElementById('Form') || document.querySelector('form');
+        if (form) (form as HTMLFormElement).submit();
+      });
+
+      // Wait for navigation
+      await page.waitForNavigation({ timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(3000);
+
+      // Get the final URL and page text
       const url = page.url();
-      const bodyText = await page.evaluate(() => document.body.innerText) || '';
+      const bodyText = await page.evaluate(() => {
+        return document.body ? document.body.innerText : '';
+      }) || '';
+
+      // Also get the HTML for debugging
+      const html = await page.evaluate(() => {
+        return document.body ? document.body.innerHTML.substring(0, 2000) : '';
+      }) || '';
 
       return {
         url,
         tool: '${tool}',
         address: '${escapedAddress}',
-        bodyText: bodyText.slice(0, 4000),
+        bodyText: bodyText.substring(0, 4000),
+        htmlPreview: html,
       };
     `;
 
@@ -66,6 +79,7 @@ export async function POST(req: Request) {
       const result = browserResult.result as {
         url?: string;
         bodyText?: string;
+        htmlPreview?: string;
       };
 
       return NextResponse.json({
@@ -76,6 +90,7 @@ export async function POST(req: Request) {
         tool,
         sourceUrl: result?.url ?? targetUrl,
         rawContent: result?.bodyText ?? "",
+        htmlPreview: result?.htmlPreview ?? "",
         nextElection: "Tuesday, April 7, 2026 — Spring Election",
       });
     } else {
