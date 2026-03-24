@@ -43,55 +43,54 @@ export async function POST(req: Request) {
       });
       console.log(`[voter-info] Nav:`, navResult.stdout?.slice(0, 100));
 
-      // Wait for page to load
+      // Wait for page load
       await firecrawl.browserExecute(sessionId, {
         language: "bash",
         code: `agent-browser wait --load networkidle`,
       });
 
-      // Step 3: Fill form using agent-browser
-      // First get a snapshot to see elements
-      const snap = await firecrawl.browserExecute(sessionId, {
-        language: "bash",
-        code: `agent-browser snapshot -i`,
-      });
-      console.log(`[voter-info] Snapshot:`, snap.stdout?.slice(0, 500));
-
-      // Fill using agent-browser
+      // Step 3: Fill form using @ref IDs from snapshot
+      // @e30 = Street, @e32 = City, @e33 = Zip, @e35 = Search button
       await firecrawl.browserExecute(sessionId, {
         language: "bash",
-        code: `agent-browser fill "#SearchStreet" "${address.replace(/"/g, '\\"')}"`,
+        code: `agent-browser fill @e30 "${address.replace(/"/g, '\\"')}"`,
       });
       await firecrawl.browserExecute(sessionId, {
         language: "bash",
-        code: `agent-browser fill "#SearchCity" "${resolvedCity.replace(/"/g, '\\"')}"`,
+        code: `agent-browser fill @e32 "${resolvedCity.replace(/"/g, '\\"')}"`,
       });
       await firecrawl.browserExecute(sessionId, {
         language: "bash",
-        code: `agent-browser fill "#SearchZip" "${resolvedZip.replace(/"/g, '\\"')}"`,
+        code: `agent-browser fill @e33 "${resolvedZip.replace(/"/g, '\\"')}"`,
       });
 
-      // Click submit
+      // Click Search button (@e35)
       await firecrawl.browserExecute(sessionId, {
         language: "bash",
-        code: `agent-browser click "#SearchAddressButton"`,
+        code: `agent-browser click @e35`,
       });
 
-      // Wait for results
+      // Wait for results page
       await firecrawl.browserExecute(sessionId, {
         language: "bash",
-        code: `agent-browser wait --load networkidle`,
+        code: `agent-browser eval "new Promise(r => setTimeout(r, 5000))"`,
       });
 
-      // Step 4: Extract the page text
+      // Step 4: Get the page text after form submission
       const textResult = await firecrawl.browserExecute(sessionId, {
         language: "bash",
         code: `agent-browser text`,
       });
 
-      console.log(`[voter-info] Text result length: ${textResult.stdout?.length ?? 0}`);
+      // Also snapshot for structure
+      const snap = await firecrawl.browserExecute(sessionId, {
+        language: "bash",
+        code: `agent-browser snapshot`,
+      });
 
-      const rawContent = textResult.stdout ?? "";
+      console.log(`[voter-info] Text: ${textResult.stdout?.length ?? 0} chars`);
+
+      const rawContent = textResult.stdout || snap.stdout || "";
       const races: Array<{ office: string; candidates: string[] }> = [];
 
       return NextResponse.json({
