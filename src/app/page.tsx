@@ -11,6 +11,8 @@ import { RaceFilter } from "@/components/RaceFilter";
 import { DiggingProgress } from "@/components/DiggingProgress";
 import { VoiceActiveState } from "@/components/VoiceActiveState";
 import { useVoiceAgent } from "@/lib/useVoiceAgent";
+import { Renderer } from "@openuidev/react-lang";
+import { ballotBadgerLibrary } from "@/lib/openui/library";
 
 interface ReceiptsResponse {
   candidate?: {
@@ -68,6 +70,7 @@ interface ReceiptsResponse {
     keyFinding: string;
   };
   source_count?: number;
+  openui?: string;
   error?: string;
 }
 
@@ -172,6 +175,8 @@ export default function BallotBadger() {
   const [components, setComponents] = useState<RenderedComponent[]>([]);
   const [statusText, setStatusText] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
+  const [openuiContent, setOpenuiContent] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
   const searchInProgressRef = useRef<string | null>(null);
 
@@ -195,6 +200,8 @@ export default function BallotBadger() {
     setIsLoading(true);
     setIsActive(true);
     setComponents([{ type: "candidate", data: candidate }]);
+    setOpenuiContent(null);
+    setIsStreaming(true);
     setStatusText("Digging into the records...");
 
     try {
@@ -211,9 +218,15 @@ export default function BallotBadger() {
         return;
       }
 
+      // Set OpenUI Lang content for the Renderer
+      if (data.openui) {
+        setOpenuiContent(data.openui);
+        setIsStreaming(false);
+      }
+
       const newComponents = buildComponentsFromResponse(data, candidate);
 
-      // Stagger component reveals
+      // Stagger component reveals (fallback for non-OpenUI rendering)
       setComponents([newComponents[0]]);
       for (let i = 1; i < newComponents.length; i++) {
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -288,6 +301,8 @@ export default function BallotBadger() {
     setIsActive(false);
     setIsLoading(false);
     setComponents([]);
+    setOpenuiContent(null);
+    setIsStreaming(false);
     setStatusText(null);
     setVoiceMode(false);
     searchInProgressRef.current = null;
@@ -382,8 +397,18 @@ export default function BallotBadger() {
               />
             </div>
           )}
-          {/* Results */}
-          <ComponentRenderer components={components} />
+          {/* Results — OpenUI Renderer when available, fallback to pre-built components */}
+          {openuiContent ? (
+            <div className="p-5 max-w-3xl mx-auto">
+              <Renderer
+                library={ballotBadgerLibrary}
+                response={openuiContent}
+                isStreaming={isStreaming}
+              />
+            </div>
+          ) : (
+            <ComponentRenderer components={components} />
+          )}
         </main>
       </div>
 

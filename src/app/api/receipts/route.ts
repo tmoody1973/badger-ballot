@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { CANDIDATES } from "@/data/candidates";
 import type { CandidateType } from "@/types";
 import { fireplexitySearch } from "@/lib/fireplexity";
+import { toOpenUILang } from "@/lib/openui/to-openui-lang";
 
 export async function POST(req: Request) {
   try {
@@ -26,10 +27,17 @@ export async function POST(req: Request) {
     // Fireplexity pipeline: Firecrawl v2 search + Groq/Claude synthesis
     const result = await fireplexitySearch(candidateName, candidateType, topic);
 
+    // Generate OpenUI Lang from structured data
+    const openui = toOpenUILang({
+      ...result.structured,
+      source_count: result.sourceCount,
+    } as Record<string, unknown>);
+
     return NextResponse.json({
       ...result.structured,
       source_count: result.sourceCount,
       sources: result.sources,
+      openui,
       pass: 1,
     });
   } catch (error) {
