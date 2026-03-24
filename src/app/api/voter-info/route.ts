@@ -33,15 +33,23 @@ export async function POST(req: Request) {
 
     console.log(`[voter-info] ScrapeId: ${scrapeId}`);
 
-    // Step 2: Use interact with a PROMPT — same as the playground
-    const interactResult = await firecrawl.interact(scrapeId, {
-      prompt: `Fill in the polling place search form with this address: Street Address: "${address}", City: "${resolvedCity}", Zip: "${resolvedZip}". Then click the Search button and wait for results. After the results load, tell me the polling place name, address, hours, and ward number.`,
+    // Step 2: Fill form and submit
+    await firecrawl.interact(scrapeId, {
+      prompt: `Fill the Street Address field with "${address}", the City field with "${resolvedCity}", and the Zip field with "${resolvedZip}". Then click the Search button.`,
     });
 
-    console.log(`[voter-info] Interact result:`, JSON.stringify(interactResult).slice(0, 500));
+    console.log(`[voter-info] Form submitted, waiting for results...`);
 
-    const output = (interactResult as unknown as { output?: string }).output ?? "";
-    const rawContent = output || JSON.stringify(interactResult);
+    // Step 3: Extract the polling place data from the results page
+    const extractResult = await firecrawl.interact(scrapeId, {
+      prompt: `Look at the current page. Tell me: 1) The name of the polling place, 2) The polling place address, 3) The polling place hours, 4) The ward number. If you see a "My Polling Place" section, read the data from there. Format your answer clearly.`,
+    });
+
+    console.log(`[voter-info] Extract result:`, JSON.stringify(extractResult).slice(0, 500));
+
+    const output = (extractResult as unknown as { output?: string }).output ?? "";
+    const stdout = (extractResult as unknown as { stdout?: string }).stdout ?? "";
+    const rawContent = output || stdout || JSON.stringify(extractResult);
 
     // Stop the interaction session
     await firecrawl.stopInteraction(scrapeId).catch(() => {});
