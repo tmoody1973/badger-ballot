@@ -49,33 +49,28 @@ export async function POST(req: Request) {
       const promptFn = config.prompt as unknown as (a: string, c: string, z: string) => string;
       const prompt = promptFn(address, resolvedCity, resolvedZip);
 
-      // Execute with node — navigate, fill, submit, extract in one go
+      // Navigate to the page
+      await firecrawl.browserExecute(sessionId, {
+        language: "bash",
+        code: `agent-browser goto "${config.url}" && agent-browser wait --load networkidle`,
+      });
+
+      // Fill form fields using element refs (@e30=street, @e32=city, @e33=zip, @e35=search)
+      await firecrawl.browserExecute(sessionId, {
+        language: "bash",
+        code: `agent-browser fill @e30 "${address.replace(/"/g, '\\"')}" && agent-browser fill @e32 "${resolvedCity.replace(/"/g, '\\"')}" && agent-browser fill @e33 "${resolvedZip.replace(/"/g, '\\"')}"`,
+      });
+
+      // Click search and wait
+      await firecrawl.browserExecute(sessionId, {
+        language: "bash",
+        code: `agent-browser click @e35 && sleep 5 && agent-browser wait --load networkidle`,
+      });
+
+      // Extract page text
       const result = await firecrawl.browserExecute(sessionId, {
-        language: "node",
-        code: `
-          // Navigate
-          await page.goto("${config.url}", { waitUntil: "networkidle" });
-          await page.waitForTimeout(3000);
-
-          // Fill form
-          await page.fill("#SearchStreet", ${JSON.stringify(address)});
-          await page.fill("#SearchCity", ${JSON.stringify(resolvedCity)});
-          await page.fill("#SearchZip", ${JSON.stringify(resolvedZip)});
-          await page.waitForTimeout(500);
-
-          // Submit
-          await page.click("#SearchAddressButton");
-          await page.waitForNavigation({ waitUntil: "networkidle", timeout: 15000 }).catch(() => {});
-          await page.waitForTimeout(5000);
-
-          // Extract visible text
-          const text = await page.evaluate(() => {
-            const main = document.querySelector("main") || document.body;
-            return main.innerText;
-          });
-
-          console.log(text.substring(0, 4000));
-        `,
+        language: "bash",
+        code: `agent-browser text`,
       });
 
       const rawContent = result.stdout ?? result.result ?? "";
