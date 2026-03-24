@@ -241,7 +241,8 @@ export function useVoiceAgent({
       },
 
       // Voter services — Firecrawl interact() navigates myvote.wi.gov
-      lookup_voter_info: async (params: {
+      // NON-BLOCKING: returns immediately so voice agent doesn't timeout
+      lookup_voter_info: (params: {
         address: string;
         city?: string;
         zip?: string;
@@ -253,38 +254,38 @@ export function useVoiceAgent({
           "ballot": "Checking what's on your ballot",
           "registration": "Checking your voter registration",
         };
-        onStatusChange(`${labels[action] ?? "Looking up voter info"} for ${params.address}...`);
+        onStatusChange(`${labels[action] ?? "Looking up voter info"} for ${params.address}... This takes about 30 seconds.`);
 
-        try {
-          const res = await fetch("/api/voter-info", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(params),
+        // Fire and forget — don't await, return immediately
+        fetch("/api/voter-info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(params),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            const componentType = action === "ballot" ? "ballotPreview"
+              : action === "registration" ? "registration"
+              : "pollingPlace";
+
+            onComponentAdd({
+              type: componentType as "pollingPlace",
+              data: {
+                address: `${params.address}, ${params.city ?? "Milwaukee"}, WI ${params.zip ?? ""}`,
+                rawContent: data.rawContent ?? "",
+                sourceUrl: data.sourceUrl ?? "https://myvote.wi.gov",
+                nextElection: data.nextElection ?? "Tuesday, April 7, 2026",
+                daysUntilElection: data.daysUntilElection ?? 14,
+              },
+            });
+            onStatusChange(`Found your ${action === "ballot" ? "ballot" : action === "registration" ? "registration" : "polling place"} info.`);
+          })
+          .catch(() => {
+            onStatusChange("Couldn't look up voter info. Visit myvote.wi.gov directly.");
           });
-          const data = await res.json();
 
-          // Render the right component based on action type
-          const componentType = action === "ballot" ? "ballotPreview"
-            : action === "registration" ? "registration"
-            : "pollingPlace";
-
-          onComponentAdd({
-            type: componentType as "pollingPlace",
-            data: {
-              address: `${params.address}, ${params.city ?? "Milwaukee"}, WI ${params.zip ?? ""}`,
-              rawContent: data.rawContent ?? "",
-              sourceUrl: data.sourceUrl ?? "https://myvote.wi.gov",
-              nextElection: data.nextElection ?? "Tuesday, April 7, 2026",
-              daysUntilElection: data.daysUntilElection ?? 14,
-            },
-          });
-
-          onStatusChange(`Found your ${action === "ballot" ? "ballot" : action === "registration" ? "registration" : "polling place"} info.`);
-          return `Voter info displayed for ${params.address}`;
-        } catch {
-          onStatusChange("Couldn't look up voter info. Visit myvote.wi.gov directly.");
-          return "Failed to look up voter info. Direct user to myvote.wi.gov";
-        }
+        // Return immediately so voice agent continues talking
+        return `Looking up voter info for ${params.address}. The results will appear on screen in about 30 seconds. In the meantime, tell the user their next election is Tuesday April 7, 2026 and remind them to bring a photo ID.`;
       },
 
       // Navigation client tools — agent controls the UI
