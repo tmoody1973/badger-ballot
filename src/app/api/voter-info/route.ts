@@ -37,14 +37,25 @@ export async function POST(req: Request) {
       timeoutMs: 55000,
     } as ConstructorParameters<typeof FirecrawlApp>[0]);
 
-    // Step 1: Scrape to get scrapeId (with extended timeout)
-    console.log(`[voter-info] Scraping ${config.url}...`);
-    const scrapeResult = await firecrawl.scrape(config.url, {
-      formats: ["markdown"],
-      timeout: 30000,
+    // Step 1: Scrape via direct API call to bypass SDK 5s timeout
+    console.log(`[voter-info] Scraping ${config.url} via direct API...`);
+    const scrapeResponse = await fetch("https://api.firecrawl.dev/v2/scrape", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: config.url,
+        formats: ["markdown"],
+        timeout: 30000,
+        waitFor: 5000,
+      }),
+      signal: AbortSignal.timeout(35000),
     });
 
-    const scrapeId = (scrapeResult as unknown as { metadata?: { scrapeId?: string } }).metadata?.scrapeId;
+    const scrapeResult = await scrapeResponse.json();
+    const scrapeId = scrapeResult?.metadata?.scrapeId ?? scrapeResult?.scrapeId;
     if (!scrapeId) {
       return NextResponse.json({
         success: false,
