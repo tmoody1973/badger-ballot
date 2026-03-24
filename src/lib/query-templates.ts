@@ -18,7 +18,7 @@ function incumbentQueries(candidate: string, topic?: string): QueryTemplate {
       { query: `${candidate} voting record ${t} congress.gov bills`, limit: 5 },
       { query: `${candidate} campaign donors fundraising opensecrets PAC contributions`, limit: 5 },
       { query: `${candidate} ${t} fact check politifact Wisconsin`, limit: 5 },
-      { query: `${candidate} Wisconsin 2026 news endorsements`, limit: 5, tbs: "qdr:y" },
+      { query: `${candidate} Wisconsin 2026 latest news`, limit: 5, tbs: "qdr:m" },
       { query: `${candidate} ${t} position statement policy Wisconsin`, limit: 5 },
     ],
   };
@@ -30,9 +30,9 @@ function challengerQueries(candidate: string, topic?: string): QueryTemplate {
   return {
     queries: [
       { query: `${candidate} campaign platform ${t} issues positions Wisconsin 2026`, limit: 5 },
-      { query: `"${candidate}" fundraising raised donors "$" Wisconsin 2026 governor`, limit: 5 },
+      { query: `"${candidate}" fundraising raised donors "$" Wisconsin 2026`, limit: 5 },
       { query: `${candidate} endorsements endorsed by Wisconsin 2026`, limit: 5 },
-      { query: `${candidate} Wisconsin 2026 governor news Wisconsin Examiner WPR`, limit: 5, tbs: "qdr:y" },
+      { query: `${candidate} Wisconsin 2026 site:wisconsinexaminer.com OR site:wispolitics.com OR site:wisconsinwatch.org OR site:pbswisconsin.org OR site:wuwm.com OR site:jsonline.com OR site:urbanmilwaukee.com`, limit: 5, tbs: "qdr:m" },
       { query: `${candidate} ${t} fact check Wisconsin 2026`, limit: 5 },
     ],
   };

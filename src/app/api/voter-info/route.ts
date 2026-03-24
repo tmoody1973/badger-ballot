@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { runBrowserAutomation } from "@/lib/kernel";
-import { getFirecrawl } from "@/lib/firecrawl";
 
 export async function POST(req: Request) {
   try {
-    const { address, city, zip } = await req.json();
+    const { address, city, zip, action } = await req.json();
 
     if (!address) {
       return NextResponse.json(
@@ -13,130 +12,137 @@ export async function POST(req: Request) {
       );
     }
 
-    // kernel.sh navigates myvote.wi.gov
+    // Determine which myvote.wi.gov tool to use
+    const tool = action ?? "polling-place"; // polling-place | ballot | registration
+    const urls: Record<string, string> = {
+      "polling-place": "https://myvote.wi.gov/en-US/FindMyPollingPlace",
+      "ballot": "https://myvote.wi.gov/en-US/PreviewMyBallot",
+      "registration": "https://myvote.wi.gov/en-US/RegisterToVote",
+    };
+    const targetUrl = urls[tool] ?? urls["polling-place"];
+
     const escapedAddress = address.replace(/'/g, "\\'");
     const escapedCity = city ? city.replace(/'/g, "\\'") : "";
+    const escapedZip = zip ? zip.replace(/'/g, "\\'") : "";
 
     const playwrightCode = `
-      // Navigate to MyVote WI polling place finder
-      await page.goto('https://myvote.wi.gov/en-us/Find-My-Polling-Place');
+      await page.goto('${targetUrl}');
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(3000);
 
-      // Fill in the address field
-      const addressSelectors = [
-        'input[id*="Address" i]',
-        'input[placeholder*="address" i]',
-        'input[name*="address" i]',
-        'input[type="text"]',
-      ];
-
-      let filled = false;
-      for (const sel of addressSelectors) {
-        const input = page.locator(sel).first();
-        if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await input.fill('${escapedAddress}');
-          filled = true;
-          break;
+      // Find and fill the address field
+      const addressInput = page.locator('input[id*="ddress"], input[placeholder*="address" i], input[name*="address" i], input[aria-label*="address" i]').first();
+      if (await addressInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await addressInput.fill('${escapedAddress}');
+      } else {
+        // Try any visible text input
+        const anyInput = page.locator('input[type="text"]:visible').first();
+        if (await anyInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await anyInput.fill('${escapedAddress}');
         }
       }
+
+      await page.waitForTimeout(500);
 
       ${escapedCity ? `
-      // Fill city if available
-      const citySelectors = ['input[id*="City" i]', 'input[name*="city" i]', 'input[placeholder*="city" i]'];
-      for (const sel of citySelectors) {
-        const input = page.locator(sel).first();
-        if (await input.isVisible({ timeout: 1000 }).catch(() => false)) {
-          await input.fill('${escapedCity}');
-          break;
-        }
+      // Fill city
+      const cityInput = page.locator('input[id*="ity"], input[placeholder*="city" i], input[name*="city" i]').first();
+      if (await cityInput.isVisible({ timeout: 1500 }).catch(() => false)) {
+        await cityInput.fill('${escapedCity}');
       }
       ` : ""}
 
-      ${zip ? `
-      // Fill zip if available
-      const zipSelectors = ['input[id*="Zip" i]', 'input[name*="zip" i]', 'input[placeholder*="zip" i]'];
-      for (const sel of zipSelectors) {
-        const input = page.locator(sel).first();
-        if (await input.isVisible({ timeout: 1000 }).catch(() => false)) {
-          await input.fill('${zip}');
-          break;
-        }
+      ${escapedZip ? `
+      // Fill zip
+      const zipInput = page.locator('input[id*="ip"], input[placeholder*="zip" i], input[name*="zip" i]').first();
+      if (await zipInput.isVisible({ timeout: 1500 }).catch(() => false)) {
+        await zipInput.fill('${escapedZip}');
       }
       ` : ""}
 
-      // Click search/submit button
-      const submitSelectors = [
-        'button[type="submit"]',
-        'input[type="submit"]',
-        'button:has-text("Search")',
-        'button:has-text("Find")',
-        'a:has-text("Search")',
-      ];
-
-      for (const sel of submitSelectors) {
-        const btn = page.locator(sel).first();
-        if (await btn.isVisible({ timeout: 1000 }).catch(() => false)) {
-          await btn.click();
-          break;
-        }
+      // Submit
+      const submitBtn = page.locator('button:has-text("Search"), button:has-text("Find"), input[type="submit"], button[type="submit"]').first();
+      if (await submitBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await submitBtn.click();
+      } else {
+        await page.keyboard.press('Enter');
       }
 
-      await page.waitForTimeout(4000);
+      await page.waitForTimeout(5000);
 
+      // Extract the visible results
       const url = page.url();
-      const bodyText = await page.locator('body').textContent();
+      const bodyText = await page.evaluate(() => document.body.innerText) || '';
+
+      // Try to extract structured data
+      let pollingPlace = '';
+      let ballotInfo = '';
+      let registrationInfo = '';
+
+      // Look for polling place info
+      const pollingSection = page.locator('text=Polling Place, text=Your polling, text=Where you vote').first();
+      if (await pollingSection.isVisible({ timeout: 1000 }).catch(() => false)) {
+        const parent = pollingSection.locator('..').first();
+        pollingPlace = await parent.innerText().catch(() => '') || '';
+      }
+
+      // Look for ballot preview
+      const ballotSection = page.locator('text=Ballot, text=Your ballot, text=On your ballot').first();
+      if (await ballotSection.isVisible({ timeout: 1000 }).catch(() => false)) {
+        const parent = ballotSection.locator('..').first();
+        ballotInfo = await parent.innerText().catch(() => '') || '';
+      }
 
       return {
         url,
-        filled,
-        textPreview: bodyText?.slice(0, 3000) ?? '',
+        tool: '${tool}',
+        address: '${escapedAddress}',
+        pollingPlace: pollingPlace.slice(0, 1000),
+        ballotInfo: ballotInfo.slice(0, 2000),
+        registrationInfo: registrationInfo.slice(0, 500),
+        bodyText: bodyText.slice(0, 3000),
       };
     `;
 
-    console.log(`[voter-info] Starting kernel.sh automation for ${address}...`);
+    console.log(`[voter-info] kernel.sh navigating myvote.wi.gov (${tool}) for ${address}...`);
     const browserResult = await runBrowserAutomation(playwrightCode, 45);
-
-    let content = "";
-    let sourceUrl = "";
 
     if (browserResult.success) {
       const result = browserResult.result as {
         url?: string;
-        textPreview?: string;
-        filled?: boolean;
+        tool?: string;
+        address?: string;
+        pollingPlace?: string;
+        ballotInfo?: string;
+        registrationInfo?: string;
+        bodyText?: string;
       };
-      sourceUrl = result?.url ?? "";
 
-      // Firecrawl scrapes the results page
-      if (sourceUrl && sourceUrl !== "about:blank") {
-        try {
-          const firecrawl = getFirecrawl();
-          const scrapeResult = await firecrawl.scrape(sourceUrl, {
-            formats: ["markdown"],
-          });
-          content = scrapeResult.markdown?.slice(0, 4000) ?? "";
-        } catch {
-          content = result?.textPreview ?? "";
-        }
-      } else {
-        content = result?.textPreview ?? "";
-      }
+      return NextResponse.json({
+        success: true,
+        address,
+        city,
+        zip,
+        tool,
+        sourceUrl: result?.url ?? targetUrl,
+        pollingPlace: result?.pollingPlace ?? null,
+        ballotInfo: result?.ballotInfo ?? null,
+        registrationInfo: result?.registrationInfo ?? null,
+        rawContent: result?.bodyText ?? "",
+        nextElection: "Tuesday, April 7, 2026 — Spring Election",
+      });
     } else {
-      // Fallback: direct the user to myvote.wi.gov
-      content = `Unable to automate lookup. Please visit myvote.wi.gov directly to check your registration and find your polling place.`;
+      // kernel.sh failed — provide helpful fallback
+      return NextResponse.json({
+        success: false,
+        address,
+        tool,
+        sourceUrl: targetUrl,
+        error: browserResult.error,
+        rawContent: `We couldn't look up your info automatically. Visit myvote.wi.gov directly:\n\n• Find your polling place: https://myvote.wi.gov/en-US/FindMyPollingPlace\n• Preview your ballot: https://myvote.wi.gov/en-US/PreviewMyBallot\n• Check registration: https://myvote.wi.gov/en-US/RegisterToVote\n• Track your ballot: https://myvote.wi.gov/en-US/TrackMyBallot`,
+        nextElection: "Tuesday, April 7, 2026 — Spring Election",
+      });
     }
-
-    return NextResponse.json({
-      address,
-      city: city ?? null,
-      zip: zip ?? null,
-      source: browserResult.success ? "myvote.wi.gov" : "fallback",
-      sourceUrl,
-      content,
-      kernelSuccess: browserResult.success,
-      error: browserResult.error,
-    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

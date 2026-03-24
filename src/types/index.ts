@@ -125,4 +125,13 @@ export type RenderedComponent =
   | { readonly type: "platform"; readonly data: { issue: string; position: string; source: string; sourceUrl?: string; candidate: string } }
   | { readonly type: "fundraisingChart"; readonly data: { title: string; bars: Array<{ name: string; amount: number; party: string; label: string }>; source?: string; sourceUrl?: string } }
   | { readonly type: "financeFiling"; readonly data: { candidate: string; content: string; source: string; sourceUrl?: string } }
-  | { readonly type: "voterInfo"; readonly data: { address: string; content: string; source: string; sourceUrl?: string } };
+  | { readonly type: "voterInfo"; readonly data: { address: string; content: string; source: string; sourceUrl?: string } }
+  | { readonly type: "voterServices"; readonly data: {
+      address: string;
+      pollingPlace?: { name: string; address: string; hours?: string };
+      isRegistered?: boolean;
+      ballotItems?: Array<{ race: string; candidates: string[] }>;
+      nextElection?: string;
+      rawContent?: string;
+      sourceUrl?: string;
+    }};

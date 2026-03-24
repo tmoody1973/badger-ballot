@@ -228,6 +228,36 @@ export function useVoiceAgent({
         return "displayed";
       },
 
+      // Voter services — triggers lookup via kernel.sh + myvote.wi.gov
+      lookup_voter_info: async (params: {
+        address: string;
+        city?: string;
+        zip?: string;
+        action?: string;
+      }) => {
+        onStatusChange(`Looking up voter info for ${params.address}...`);
+        try {
+          const res = await fetch("/api/voter-info", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(params),
+          });
+          const data = await res.json();
+          onComponentAdd({
+            type: "voterServices",
+            data: {
+              address: params.address,
+              nextElection: data.nextElection,
+              rawContent: data.rawContent,
+              sourceUrl: data.sourceUrl,
+            },
+          });
+          return `Voter info displayed for ${params.address}`;
+        } catch {
+          return "Failed to look up voter info. Direct user to myvote.wi.gov";
+        }
+      },
+
       // Navigation client tools — agent controls the UI
       select_candidate: (params: { candidate_id: string }) => {
         onSelectCandidate(params.candidate_id);
