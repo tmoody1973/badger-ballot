@@ -127,6 +127,9 @@ export type RenderedComponent =
   | { readonly type: "financeFiling"; readonly data: { candidate: string; content: string; source: string; sourceUrl?: string } }
   | { readonly type: "voterInfo"; readonly data: { address: string; content: string; source: string; sourceUrl?: string } }
   | { readonly type: "raceComparison"; readonly data: { raceCategory: string; office: string } }
+  | { readonly type: "pollingPlace"; readonly data: { address: string; rawContent: string; sourceUrl: string; nextElection: string; daysUntilElection: number } }
+  | { readonly type: "ballotPreview"; readonly data: { address: string; rawContent: string; sourceUrl: string; nextElection: string; daysUntilElection: number } }
+  | { readonly type: "registration"; readonly data: { address: string; rawContent: string; sourceUrl: string; nextElection: string; daysUntilElection: number } }
   | { readonly type: "voterServices"; readonly data: {
       address: string;
       pollingPlace?: { name: string; address: string; hours?: string };

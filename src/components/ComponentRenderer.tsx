@@ -14,6 +14,9 @@ import { FinanceFilingCard } from "./FinanceFilingCard";
 import { VoterInfoCard } from "./VoterInfoCard";
 import { VoterServicesCard } from "./VoterServicesCard";
 import { RaceComparison } from "./RaceComparison";
+import { PollingPlaceCard } from "./PollingPlaceCard";
+import { BallotPreviewCard } from "./BallotPreviewCard";
+import { RegistrationCard } from "./RegistrationCard";
 
 interface ComponentRendererProps {
   readonly components: readonly RenderedComponent[];
@@ -56,6 +59,9 @@ export function ComponentRenderer({ components }: ComponentRendererProps) {
   const voterInfo = components.filter((c) => c.type === "voterInfo");
   const voterServices = components.filter((c) => c.type === "voterServices");
   const raceComparisons = components.filter((c) => c.type === "raceComparison");
+  const pollingPlaces = components.filter((c) => c.type === "pollingPlace");
+  const ballotPreviews = components.filter((c) => c.type === "ballotPreview");
+  const registrations = components.filter((c) => c.type === "registration");
 
   return (
     <div className="p-5 max-w-3xl mx-auto">
@@ -147,6 +153,33 @@ export function ComponentRenderer({ components }: ComponentRendererProps) {
             {filings.map((component, i) => (
               <FinanceFilingCard key={`filing-${i}`} data={component.data} />
             ))}
+          </div>
+        </>
+      )}
+
+      {pollingPlaces.length > 0 && (
+        <>
+          <SectionHeader label="Your Polling Place" icon={"📍"} />
+          <div className="space-y-3">
+            {pollingPlaces.map((c, i) => <PollingPlaceCard key={`pp-${i}`} data={c.data} />)}
+          </div>
+        </>
+      )}
+
+      {ballotPreviews.length > 0 && (
+        <>
+          <SectionHeader label="What's On Your Ballot" icon={"🗳️"} />
+          <div className="space-y-3">
+            {ballotPreviews.map((c, i) => <BallotPreviewCard key={`bp-${i}`} data={c.data} />)}
+          </div>
+        </>
+      )}
+
+      {registrations.length > 0 && (
+        <>
+          <SectionHeader label="Registration Status" icon={"✅"} />
+          <div className="space-y-3">
+            {registrations.map((c, i) => <RegistrationCard key={`reg-${i}`} data={c.data} />)}
           </div>
         </>
       )}

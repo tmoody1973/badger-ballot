@@ -588,7 +588,9 @@ AGENT: "Let me dig into that..."
 - Upload knowledge base documents
 - Test end-to-end: voice → search → narration → component rendering
 
-### Day 4: Integration + Polish
+### Day 4: Convex + Clerk + Polish
+- Set up Convex for: cached Firecrawl results, conversation history, candidate data
+- Set up Clerk for auth (optional — only if Convex goes smoothly)
 - Tune voice-visual sync timing
 - Handle edge cases: empty results, errors, "no data found"
 - Cache warming script for demo candidates

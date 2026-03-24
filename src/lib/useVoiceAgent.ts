@@ -240,14 +240,21 @@ export function useVoiceAgent({
         return "displayed";
       },
 
-      // Voter services — triggers lookup via kernel.sh + myvote.wi.gov
+      // Voter services — Firecrawl interact() navigates myvote.wi.gov
       lookup_voter_info: async (params: {
         address: string;
         city?: string;
         zip?: string;
         action?: string;
       }) => {
-        onStatusChange(`Looking up voter info for ${params.address}...`);
+        const action = params.action ?? "polling-place";
+        const labels: Record<string, string> = {
+          "polling-place": "Looking up your polling place",
+          "ballot": "Checking what's on your ballot",
+          "registration": "Checking your voter registration",
+        };
+        onStatusChange(`${labels[action] ?? "Looking up voter info"} for ${params.address}...`);
+
         try {
           const res = await fetch("/api/voter-info", {
             method: "POST",
@@ -255,17 +262,27 @@ export function useVoiceAgent({
             body: JSON.stringify(params),
           });
           const data = await res.json();
+
+          // Render the right component based on action type
+          const componentType = action === "ballot" ? "ballotPreview"
+            : action === "registration" ? "registration"
+            : "pollingPlace";
+
           onComponentAdd({
-            type: "voterServices",
+            type: componentType as "pollingPlace",
             data: {
-              address: params.address,
-              nextElection: data.nextElection,
-              rawContent: data.rawContent,
-              sourceUrl: data.sourceUrl,
+              address: `${params.address}, ${params.city ?? "Milwaukee"}, WI ${params.zip ?? ""}`,
+              rawContent: data.rawContent ?? "",
+              sourceUrl: data.sourceUrl ?? "https://myvote.wi.gov",
+              nextElection: data.nextElection ?? "Tuesday, April 7, 2026",
+              daysUntilElection: data.daysUntilElection ?? 14,
             },
           });
+
+          onStatusChange(`Found your ${action === "ballot" ? "ballot" : action === "registration" ? "registration" : "polling place"} info.`);
           return `Voter info displayed for ${params.address}`;
         } catch {
+          onStatusChange("Couldn't look up voter info. Visit myvote.wi.gov directly.");
           return "Failed to look up voter info. Direct user to myvote.wi.gov";
         }
       },
