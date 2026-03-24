@@ -1,7 +1,7 @@
 {
   "functions": {
     "src/app/api/voter-info/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 120
     },
     "src/app/api/receipts/route.ts": {
       "maxDuration": 60
