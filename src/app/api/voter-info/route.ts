@@ -36,61 +36,25 @@ export async function POST(req: Request) {
     }
 
     try {
-      // Step 2: Navigate to the page
+      // Step 2: All-in-one — navigate, fill, submit, wait, extract
       const navResult = await firecrawl.browserExecute(sessionId, {
         language: "bash",
-        code: `agent-browser goto "${targetUrl}"`,
-      });
-      console.log(`[voter-info] Nav:`, navResult.stdout?.slice(0, 100));
-
-      // Wait for page load
-      await firecrawl.browserExecute(sessionId, {
-        language: "bash",
-        code: `agent-browser wait --load networkidle`,
-      });
-
-      // Step 3: Fill form using @ref IDs from snapshot
-      // @e30 = Street, @e32 = City, @e33 = Zip, @e35 = Search button
-      await firecrawl.browserExecute(sessionId, {
-        language: "bash",
-        code: `agent-browser fill @e30 "${address.replace(/"/g, '\\"')}"`,
-      });
-      await firecrawl.browserExecute(sessionId, {
-        language: "bash",
-        code: `agent-browser fill @e32 "${resolvedCity.replace(/"/g, '\\"')}"`,
-      });
-      await firecrawl.browserExecute(sessionId, {
-        language: "bash",
-        code: `agent-browser fill @e33 "${resolvedZip.replace(/"/g, '\\"')}"`,
+        code: [
+          `agent-browser goto "${targetUrl}"`,
+          `agent-browser wait --load networkidle`,
+          `agent-browser fill @e30 "${address.replace(/"/g, '\\"')}"`,
+          `agent-browser fill @e32 "${resolvedCity.replace(/"/g, '\\"')}"`,
+          `agent-browser fill @e33 "${resolvedZip.replace(/"/g, '\\"')}"`,
+          `agent-browser click @e35`,
+          `agent-browser wait --load networkidle`,
+          `sleep 3`,
+          `agent-browser text`,
+        ].join(" && "),
       });
 
-      // Click Search button (@e35)
-      await firecrawl.browserExecute(sessionId, {
-        language: "bash",
-        code: `agent-browser click @e35`,
-      });
+      console.log(`[voter-info] Result: ${navResult.stdout?.length ?? 0} chars, success: ${navResult.success}`);
 
-      // Wait for results page
-      await firecrawl.browserExecute(sessionId, {
-        language: "bash",
-        code: `agent-browser eval "new Promise(r => setTimeout(r, 5000))"`,
-      });
-
-      // Step 4: Get the page text after form submission
-      const textResult = await firecrawl.browserExecute(sessionId, {
-        language: "bash",
-        code: `agent-browser text`,
-      });
-
-      // Also snapshot for structure
-      const snap = await firecrawl.browserExecute(sessionId, {
-        language: "bash",
-        code: `agent-browser snapshot`,
-      });
-
-      console.log(`[voter-info] Text: ${textResult.stdout?.length ?? 0} chars`);
-
-      const rawContent = textResult.stdout || snap.stdout || "";
+      const rawContent = navResult.stdout || "";
       const races: Array<{ office: string; candidates: string[] }> = [];
 
       return NextResponse.json({
