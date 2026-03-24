@@ -1,112 +1,129 @@
 import { NextResponse } from "next/server";
-import { runBrowserAutomation } from "@/lib/kernel";
+import FirecrawlApp from "@mendable/firecrawl-js";
 
 export async function POST(req: Request) {
   try {
     const { address, city, zip, action } = await req.json();
 
     if (!address) {
-      return NextResponse.json(
-        { error: "address is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "address is required" }, { status: 400 });
     }
 
-    // Determine which myvote.wi.gov tool to use
-    const tool = action ?? "polling-place"; // polling-place | ballot | registration
+    const resolvedCity = city || "Milwaukee";
+    const resolvedZip = zip || "";
+    const tool = action ?? "ballot";
+
     const urls: Record<string, string> = {
       "polling-place": "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
       "ballot": "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
-      "registration": "https://myvote.wi.gov/en-us/Register-To-Vote",
     };
-    const targetUrl = urls[tool] ?? urls["polling-place"];
+    const targetUrl = urls[tool] ?? urls["ballot"];
 
-    const escapedAddress = address.replace(/'/g, "\\'");
-    const escapedCity = city ? city.replace(/'/g, "\\'") : "";
-    const escapedZip = zip ? zip.replace(/'/g, "\\'") : "";
+    const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY! });
 
-    const playwrightCode = `
-      await page.goto('${targetUrl}');
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+    // Step 1: Create a Firecrawl Browser session
+    const session = await firecrawl.browser({ ttl: 120, activityTtl: 60 });
+    const sessionId = (session as unknown as { id: string }).id;
+    console.log(`[voter-info] Firecrawl Browser session: ${sessionId}`);
 
-      // Fill form fields using JavaScript directly for reliability
-      await page.evaluate((addr, city, zip) => {
-        const streetEl = document.getElementById('SearchStreet');
-        const cityEl = document.getElementById('SearchCity');
-        const zipEl = document.getElementById('SearchZip');
-        if (streetEl) { (streetEl as HTMLInputElement).value = addr; streetEl.dispatchEvent(new Event('input', {bubbles: true})); }
-        if (cityEl) { (cityEl as HTMLInputElement).value = city; cityEl.dispatchEvent(new Event('input', {bubbles: true})); }
-        if (zipEl) { (zipEl as HTMLInputElement).value = zip; zipEl.dispatchEvent(new Event('input', {bubbles: true})); }
-      }, '${escapedAddress}', '${escapedCity || "Milwaukee"}', '${escapedZip || "53206"}');
+    try {
+      // Step 2: Execute Playwright code remotely in Firecrawl's sandbox
+      const result = await firecrawl.browserExecute(sessionId, {
+        language: "node",
+        code: `
+          await page.goto(${JSON.stringify(targetUrl)}, {
+            waitUntil: "networkidle",
+          });
 
-      await page.waitForTimeout(1000);
+          await page.waitForTimeout(2000);
 
-      // Submit the form via JavaScript
-      await page.evaluate(() => {
-        const form = document.getElementById('Form') || document.querySelector('form');
-        if (form) (form as HTMLFormElement).submit();
+          // Fill the address form using exact field IDs from myvote.wi.gov
+          await page.fill("#SearchStreet", ${JSON.stringify(address)});
+          await page.fill("#SearchCity", ${JSON.stringify(resolvedCity)});
+          await page.fill("#SearchZip", ${JSON.stringify(resolvedZip)});
+
+          await page.waitForTimeout(500);
+
+          // Submit and wait for results
+          await Promise.all([
+            page.waitForLoadState("networkidle"),
+            page.click("#SearchAddressButton"),
+          ]);
+
+          // Wait for results to render
+          await page.waitForSelector("main, #ContentPane", { timeout: 10000 }).catch(() => {});
+          await page.waitForTimeout(2000);
+
+          // Extract the results
+          const url = page.url();
+          const bodyText = await page.evaluate(() => {
+            const main = document.querySelector("main, #ContentPane, .ballot-content, #content");
+            return (main || document.body)?.innerText || "";
+          });
+
+          // Try structured extraction for ballot items
+          const structured = await page.evaluate(() => {
+            const races = Array.from(
+              document.querySelectorAll(".contest, .ballot-item, [class*='contest'], .panel, .card")
+            ).map((race) => ({
+              office: (race.querySelector("h2, h3, h4, [class*='title'], .panel-heading")?.textContent?.trim()) ?? "",
+              candidates: Array.from(
+                race.querySelectorAll(".candidate, li, [class*='candidate'], td")
+              ).map((c) => c.textContent?.trim() ?? "")
+                .filter((c) => c.length > 2 && c.length < 100),
+            })).filter(r => r.office.length > 3);
+
+            return { races };
+          });
+
+          return {
+            url,
+            bodyText: bodyText?.substring(0, 4000) ?? "",
+            races: structured.races,
+          };
+        `,
       });
 
-      // Wait for navigation
-      await page.waitForNavigation({ timeout: 15000 }).catch(() => {});
-      await page.waitForTimeout(3000);
-
-      // Get the final URL and page text
-      const url = page.url();
-      const bodyText = await page.evaluate(() => {
-        return document.body ? document.body.innerText : '';
-      }) || '';
-
-      // Also get the HTML for debugging
-      const html = await page.evaluate(() => {
-        return document.body ? document.body.innerHTML.substring(0, 2000) : '';
-      }) || '';
-
-      return {
-        url,
-        tool: '${tool}',
-        address: '${escapedAddress}',
-        bodyText: bodyText.substring(0, 4000),
-        htmlPreview: html,
-      };
-    `;
-
-    console.log(`[voter-info] kernel.sh navigating myvote.wi.gov (${tool}) for ${address}...`);
-    const browserResult = await runBrowserAutomation(playwrightCode, 45);
-
-    if (browserResult.success) {
-      const result = browserResult.result as {
-        url?: string;
-        bodyText?: string;
-        htmlPreview?: string;
-      };
+      const data = (result as unknown as { result?: Record<string, unknown> }).result ?? {};
+      const rawContent = (data.bodyText as string) ?? "";
+      const races = (data.races as Array<{ office: string; candidates: string[] }>) ?? [];
 
       return NextResponse.json({
         success: true,
         address,
-        city: city || "Milwaukee",
-        zip,
+        city: resolvedCity,
+        zip: resolvedZip,
         tool,
-        sourceUrl: result?.url ?? targetUrl,
-        rawContent: result?.bodyText ?? "",
-        htmlPreview: result?.htmlPreview ?? "",
+        sourceUrl: (data.url as string) ?? targetUrl,
+        rawContent,
+        races,
         nextElection: "Tuesday, April 7, 2026 — Spring Election",
+        daysUntilElection: Math.max(0, Math.ceil((new Date("2026-04-07").getTime() - Date.now()) / (1000 * 60 * 60 * 24))),
+        links: {
+          pollingPlace: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
+          ballot: "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
+          registration: "https://myvote.wi.gov/en-us/Register-To-Vote",
+          absentee: "https://myvote.wi.gov/en-us/Vote-Absentee-By-Mail",
+          trackBallot: "https://myvote.wi.gov/en-us/Track-My-Ballot",
+        },
       });
-    } else {
-      // kernel.sh failed — provide helpful fallback
-      return NextResponse.json({
-        success: false,
-        address,
-        tool,
-        sourceUrl: targetUrl,
-        error: browserResult.error,
-        rawContent: `We couldn't look up your info automatically. Visit myvote.wi.gov directly:\n\n• Find your polling place: https://myvote.wi.gov/en-US/FindMyPollingPlace\n• Preview your ballot: https://myvote.wi.gov/en-US/PreviewMyBallot\n• Check registration: https://myvote.wi.gov/en-US/RegisterToVote\n• Track your ballot: https://myvote.wi.gov/en-US/TrackMyBallot`,
-        nextElection: "Tuesday, April 7, 2026 — Spring Election",
-      });
+    } finally {
+      await firecrawl.deleteBrowser(sessionId).catch(() => {});
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[voter-info] Error:", message);
+
+    return NextResponse.json({
+      success: false,
+      error: message,
+      rawContent: "Visit myvote.wi.gov directly to check your voter info.",
+      nextElection: "Tuesday, April 7, 2026 — Spring Election",
+      links: {
+        pollingPlace: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
+        ballot: "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
+        registration: "https://myvote.wi.gov/en-us/Register-To-Vote",
+      },
+    });
   }
 }
