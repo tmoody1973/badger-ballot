@@ -8,7 +8,7 @@ const TOOLS: Record<string, { url: string; extractPrompt: string }> = {
   },
   "ballot": {
     url: "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
-    extractPrompt: "List every race and referendum on this ballot with all candidates. Format as a clear list.",
+    extractPrompt: "Wait for the sample ballot to fully load. You should see a heading that says SAMPLE BALLOT FOR MY NEXT ELECTION. List every race showing the office name and all candidate names. Include referendums if any. Format as a numbered list with candidates under each race.",
   },
   "registration": {
     url: "https://myvote.wi.gov/en-us/My-Voter-Info",
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
         "Authorization": `Bearer ${process.env.FIRECRAWL_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ prompt: fillPrompt, timeout: 50 }),
+      body: JSON.stringify({ prompt: fillPrompt, timeout: 90 }),
       signal: AbortSignal.timeout(110000),
     });
 
