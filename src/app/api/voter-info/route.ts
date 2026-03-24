@@ -79,7 +79,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ prompt: fillPrompt, timeout: 50 }),
-      signal: AbortSignal.timeout(55000),
+      signal: AbortSignal.timeout(110000),
     });
 
     const interactResult = await interactResponse.json();
