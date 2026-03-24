@@ -68,21 +68,31 @@ export async function POST(req: Request) {
 
     console.log(`[voter-info] ScrapeId: ${scrapeId}, starting interact...`);
 
-    // Step 2: Single combined interact — fill form + submit + extract
+    // Step 2: Call interact API directly to bypass SDK 5s timeout
     const fillPrompt = `Fill the Street Address field with "${address}", the City field with "${resolvedCity}", and the Zip field with "${resolvedZip}". Click the Search button. Wait for the results page to load. Then ${config.extractPrompt.toLowerCase()}`;
 
-    const interactResult = await firecrawl.interact(scrapeId, {
-      prompt: fillPrompt,
-      timeout: 45,
+    console.log(`[voter-info] Calling interact API directly...`);
+    const interactResponse = await fetch(`https://api.firecrawl.dev/v2/scrape/${scrapeId}/interact`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt: fillPrompt, timeout: 50 }),
+      signal: AbortSignal.timeout(55000),
     });
 
-    const output = (interactResult as unknown as { output?: string }).output ?? "";
-    const stdout = (interactResult as unknown as { stdout?: string }).stdout ?? "";
+    const interactResult = await interactResponse.json();
+    const output = interactResult?.output ?? "";
+    const stdout = interactResult?.stdout ?? "";
 
     console.log(`[voter-info] Done. Output: ${output.length} chars, Stdout: ${stdout.length} chars`);
 
     // Stop session
-    await firecrawl.stopInteraction(scrapeId).catch(() => {});
+    await fetch(`https://api.firecrawl.dev/v2/scrape/${scrapeId}/interact`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${process.env.FIRECRAWL_API_KEY}` },
+    }).catch(() => {});
 
     // Use output (AI answer) if available, otherwise use stdout
     const rawContent = output || (stdout.length < 2000 ? stdout : "");
