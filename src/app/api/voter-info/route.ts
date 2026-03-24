@@ -36,81 +36,41 @@ export async function POST(req: Request) {
     }
 
     try {
-      // Step 2: Execute Playwright code remotely in Firecrawl's sandbox
-      const result = await firecrawl.browserExecute(sessionId, {
+      // Step 2: Navigate and fill form
+      await firecrawl.browserExecute(sessionId, {
         language: "node",
         code: `
-          await page.goto(${JSON.stringify(targetUrl)}, {
-            waitUntil: "networkidle",
-          });
-
+          await page.goto(${JSON.stringify(targetUrl)}, { waitUntil: "networkidle" });
           await page.waitForTimeout(2000);
-
-          // Fill the address form using exact field IDs from myvote.wi.gov
           await page.fill("#SearchStreet", ${JSON.stringify(address)});
           await page.fill("#SearchCity", ${JSON.stringify(resolvedCity)});
           await page.fill("#SearchZip", ${JSON.stringify(resolvedZip)});
-
           await page.waitForTimeout(500);
-
-          // Submit and wait for results
           await Promise.all([
             page.waitForLoadState("networkidle"),
             page.click("#SearchAddressButton"),
           ]);
-
-          // Wait for results to render
-          await page.waitForSelector("main, #ContentPane", { timeout: 10000 }).catch(() => {});
-          await page.waitForTimeout(2000);
-
-          // Extract the results
-          const url = page.url();
-          const bodyText = await page.evaluate(() => {
-            const main = document.querySelector("main, #ContentPane, .ballot-content, #content");
-            return (main || document.body)?.innerText || "";
-          });
-
-          // Try structured extraction for ballot items
-          const structured = await page.evaluate(() => {
-            const races = Array.from(
-              document.querySelectorAll(".contest, .ballot-item, [class*='contest'], .panel, .card")
-            ).map((race) => ({
-              office: (race.querySelector("h2, h3, h4, [class*='title'], .panel-heading")?.textContent?.trim()) ?? "",
-              candidates: Array.from(
-                race.querySelectorAll(".candidate, li, [class*='candidate'], td")
-              ).map((c) => c.textContent?.trim() ?? "")
-                .filter((c) => c.length > 2 && c.length < 100),
-            })).filter(r => r.office.length > 3);
-
-            return { races };
-          });
-
-          return {
-            url,
-            bodyText: bodyText?.substring(0, 4000) ?? "",
-            races: structured.races,
-          };
+          await page.waitForTimeout(5000);
+          console.log("Form submitted, URL: " + page.url());
         `,
       });
 
-      console.log(`[voter-info] Execute result:`, JSON.stringify(result).slice(0, 500));
+      // Step 3: Extract results in a separate call
+      const extractResult = await firecrawl.browserExecute(sessionId, {
+        language: "node",
+        code: `
+          const text = await page.evaluate(() => {
+            const el = document.querySelector("main") || document.querySelector("#ContentPane") || document.body;
+            return el ? el.innerText : "";
+          });
+          console.log(text.substring(0, 4000));
+        `,
+      });
 
-      // Parse result — may be in result.result or result.stdout
-      let rawContent = "";
-      let races: Array<{ office: string; candidates: string[] }> = [];
+      console.log(`[voter-info] Extract stdout length: ${extractResult.stdout?.length ?? 0}`);
 
-      if (result.result) {
-        try {
-          const parsed = typeof result.result === "string" ? JSON.parse(result.result) : result.result;
-          rawContent = (parsed as Record<string, unknown>).bodyText as string ?? "";
-          races = ((parsed as Record<string, unknown>).races as Array<{ office: string; candidates: string[] }>) ?? [];
-        } catch {
-          rawContent = String(result.result);
-        }
-      }
-      if (!rawContent && result.stdout) {
-        rawContent = result.stdout;
-      }
+      const rawContent = extractResult.stdout ?? extractResult.result ?? "";
+      const races: Array<{ office: string; candidates: string[] }> = [];
 
       return NextResponse.json({
         success: true,
