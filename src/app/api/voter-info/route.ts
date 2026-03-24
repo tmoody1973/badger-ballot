@@ -15,9 +15,9 @@ export async function POST(req: Request) {
     // Determine which myvote.wi.gov tool to use
     const tool = action ?? "polling-place"; // polling-place | ballot | registration
     const urls: Record<string, string> = {
-      "polling-place": "https://myvote.wi.gov/en-US/FindMyPollingPlace",
-      "ballot": "https://myvote.wi.gov/en-US/PreviewMyBallot",
-      "registration": "https://myvote.wi.gov/en-US/RegisterToVote",
+      "polling-place": "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
+      "ballot": "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
+      "registration": "https://myvote.wi.gov/en-us/Register-To-Vote",
     };
     const targetUrl = urls[tool] ?? urls["polling-place"];
 
@@ -38,39 +38,24 @@ export async function POST(req: Request) {
 
       await page.waitForTimeout(500);
 
-      // Click the search/submit button
-      const submitBtn = page.locator('button[type="submit"], input[type="submit"], button:has-text("Find"), button:has-text("Search")').first();
-      if (await submitBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await submitBtn.click();
-      } else {
-        // Try submitting the form directly
-        await page.evaluate(() => {
-          const form = document.getElementById('Form') || document.querySelector('form');
-          if (form) (form as HTMLFormElement).submit();
-        });
-      }
+      // Submit the form and wait for navigation (kernel.sh docs pattern)
+      await Promise.all([
+        page.waitForNavigation({ timeout: 15000 }).catch(() => {}),
+        page.click('button[type="submit"], input[type="submit"]'),
+      ]);
 
-      // Wait for results — the page may reload or use AJAX
-      await page.waitForTimeout(3000);
-      await page.waitForLoadState('networkidle');
+      // Extra wait for any AJAX content
       await page.waitForTimeout(3000);
 
       // Extract visible text from the results page
       const url = page.url();
       const bodyText = await page.evaluate(() => document.body.innerText) || '';
 
-      // Also try to get any results container specifically
-      let resultsText = '';
-      const resultsContainer = page.locator('.polling-place, .results, #results, [class*="result"], [class*="polling"]').first();
-      if (await resultsContainer.isVisible({ timeout: 2000 }).catch(() => false)) {
-        resultsText = await resultsContainer.innerText().catch(() => '') || '';
-      }
-
       return {
         url,
         tool: '${tool}',
         address: '${escapedAddress}',
-        bodyText: (resultsText || bodyText).slice(0, 4000),
+        bodyText: bodyText.slice(0, 4000),
       };
     `;
 
