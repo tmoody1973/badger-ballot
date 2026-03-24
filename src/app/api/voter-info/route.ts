@@ -101,8 +101,13 @@ export async function POST(req: Request) {
         zip: resolvedZip,
         tool,
         sourceUrl: targetUrl,
-        rawContent,
+        rawContent: typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent),
         races,
+        _debug: {
+          navResult: navResult ? { stdout: navResult.stdout?.slice(0, 200), stderr: navResult.stderr?.slice(0, 200), success: navResult.success } : null,
+          snapResult: snap ? { stdout: snap.stdout?.slice(0, 500), stderr: snap.stderr?.slice(0, 200), success: snap.success } : null,
+          textResult: textResult ? { stdout: textResult.stdout?.slice(0, 200), stderr: textResult.stderr?.slice(0, 200), success: textResult.success, result: String(textResult.result ?? "").slice(0, 200) } : null,
+        },
         nextElection: "Tuesday, April 7, 2026 — Spring Election",
         daysUntilElection: Math.max(0, Math.ceil((new Date("2026-04-07").getTime() - Date.now()) / (1000 * 60 * 60 * 24))),
         links: {
