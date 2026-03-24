@@ -38,23 +38,39 @@ export async function POST(req: Request) {
 
       await page.waitForTimeout(500);
 
-      // Click the search button - "Find My Polling Place"
-      const submitBtn = page.locator('button:has-text("Find My Polling Place"), button:has-text("Search"), input[type="submit"]').first();
-      await submitBtn.click();
+      // Click the search/submit button
+      const submitBtn = page.locator('button[type="submit"], input[type="submit"], button:has-text("Find"), button:has-text("Search")').first();
+      if (await submitBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await submitBtn.click();
+      } else {
+        // Try submitting the form directly
+        await page.evaluate(() => {
+          const form = document.getElementById('Form') || document.querySelector('form');
+          if (form) (form as HTMLFormElement).submit();
+        });
+      }
 
-      // Wait for results to load
-      await page.waitForTimeout(5000);
+      // Wait for results — the page may reload or use AJAX
+      await page.waitForTimeout(3000);
       await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(3000);
 
-      // Extract the visible results
+      // Extract visible text from the results page
       const url = page.url();
       const bodyText = await page.evaluate(() => document.body.innerText) || '';
+
+      // Also try to get any results container specifically
+      let resultsText = '';
+      const resultsContainer = page.locator('.polling-place, .results, #results, [class*="result"], [class*="polling"]').first();
+      if (await resultsContainer.isVisible({ timeout: 2000 }).catch(() => false)) {
+        resultsText = await resultsContainer.innerText().catch(() => '') || '';
+      }
 
       return {
         url,
         tool: '${tool}',
         address: '${escapedAddress}',
-        bodyText: bodyText.slice(0, 4000),
+        bodyText: (resultsText || bodyText).slice(0, 4000),
       };
     `;
 
