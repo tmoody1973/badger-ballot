@@ -23,8 +23,17 @@ export async function POST(req: Request) {
 
     // Step 1: Create a Firecrawl Browser session
     const session = await firecrawl.browser({ ttl: 120, activityTtl: 60 });
-    const sessionId = (session as unknown as { id: string }).id;
-    console.log(`[voter-info] Firecrawl Browser session: ${sessionId}`);
+    const sessionId = session.id;
+    console.log(`[voter-info] Firecrawl Browser session:`, JSON.stringify(session).slice(0, 300));
+
+    if (!sessionId) {
+      return NextResponse.json({
+        success: false,
+        error: `Browser session creation failed: ${JSON.stringify(session).slice(0, 200)}`,
+        rawContent: "",
+        links: { pollingPlace: "https://myvote.wi.gov/en-us/Find-My-Polling-Place" },
+      });
+    }
 
     try {
       // Step 2: Execute Playwright code remotely in Firecrawl's sandbox
@@ -84,9 +93,24 @@ export async function POST(req: Request) {
         `,
       });
 
-      const data = (result as unknown as { result?: Record<string, unknown> }).result ?? {};
-      const rawContent = (data.bodyText as string) ?? "";
-      const races = (data.races as Array<{ office: string; candidates: string[] }>) ?? [];
+      console.log(`[voter-info] Execute result:`, JSON.stringify(result).slice(0, 500));
+
+      // Parse result — may be in result.result or result.stdout
+      let rawContent = "";
+      let races: Array<{ office: string; candidates: string[] }> = [];
+
+      if (result.result) {
+        try {
+          const parsed = typeof result.result === "string" ? JSON.parse(result.result) : result.result;
+          rawContent = (parsed as Record<string, unknown>).bodyText as string ?? "";
+          races = ((parsed as Record<string, unknown>).races as Array<{ office: string; candidates: string[] }>) ?? [];
+        } catch {
+          rawContent = String(result.result);
+        }
+      }
+      if (!rawContent && result.stdout) {
+        rawContent = result.stdout;
+      }
 
       return NextResponse.json({
         success: true,
@@ -94,7 +118,7 @@ export async function POST(req: Request) {
         city: resolvedCity,
         zip: resolvedZip,
         tool,
-        sourceUrl: (data.url as string) ?? targetUrl,
+        sourceUrl: targetUrl,
         rawContent,
         races,
         nextElection: "Tuesday, April 7, 2026 — Spring Election",
