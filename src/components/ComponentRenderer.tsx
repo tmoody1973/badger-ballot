@@ -13,6 +13,7 @@ import { FundraisingChart } from "./FundraisingChart";
 import { FinanceFilingCard } from "./FinanceFilingCard";
 import { VoterInfoCard } from "./VoterInfoCard";
 import { VoterServicesCard } from "./VoterServicesCard";
+import { RaceComparison } from "./RaceComparison";
 
 interface ComponentRendererProps {
   readonly components: readonly RenderedComponent[];
@@ -54,6 +55,7 @@ export function ComponentRenderer({ components }: ComponentRendererProps) {
   const filings = components.filter((c) => c.type === "financeFiling");
   const voterInfo = components.filter((c) => c.type === "voterInfo");
   const voterServices = components.filter((c) => c.type === "voterServices");
+  const raceComparisons = components.filter((c) => c.type === "raceComparison");
 
   return (
     <div className="p-5 max-w-3xl mx-auto">
@@ -146,6 +148,18 @@ export function ComponentRenderer({ components }: ComponentRendererProps) {
               <FinanceFilingCard key={`filing-${i}`} data={component.data} />
             ))}
           </div>
+        </>
+      )}
+
+      {raceComparisons.length > 0 && (
+        <>
+          {raceComparisons.map((component, i) => (
+            <RaceComparison
+              key={`race-${i}`}
+              raceCategory={component.data.raceCategory}
+              office={component.data.office}
+            />
+          ))}
         </>
       )}
 

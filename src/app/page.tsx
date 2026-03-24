@@ -80,6 +80,17 @@ function buildComponentsFromResponse(
 
   result.push({ type: "candidate", data: candidateData });
 
+  // Show race comparison carousel if this race has multiple candidates
+  const racemates = CANDIDATES.filter(
+    (c) => c.office === candidateData.office && c.id !== candidateData.id,
+  );
+  if (racemates.length > 0) {
+    result.push({
+      type: "raceComparison",
+      data: { raceCategory: candidateData.raceCategory, office: candidateData.office },
+    });
+  }
+
   if (response.votes) {
     for (const vote of response.votes) {
       result.push({

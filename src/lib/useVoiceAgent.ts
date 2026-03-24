@@ -228,6 +228,18 @@ export function useVoiceAgent({
         return "displayed";
       },
 
+      // Race comparison carousel
+      show_race_comparison: (params: { raceCategory: string; office: string }) => {
+        onComponentAdd({
+          type: "raceComparison",
+          data: {
+            raceCategory: params.raceCategory,
+            office: params.office,
+          },
+        });
+        return "displayed";
+      },
+
       // Voter services — triggers lookup via kernel.sh + myvote.wi.gov
       lookup_voter_info: async (params: {
         address: string;

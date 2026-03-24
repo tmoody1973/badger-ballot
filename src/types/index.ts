@@ -126,6 +126,7 @@ export type RenderedComponent =
   | { readonly type: "fundraisingChart"; readonly data: { title: string; bars: Array<{ name: string; amount: number; party: string; label: string }>; source?: string; sourceUrl?: string } }
   | { readonly type: "financeFiling"; readonly data: { candidate: string; content: string; source: string; sourceUrl?: string } }
   | { readonly type: "voterInfo"; readonly data: { address: string; content: string; source: string; sourceUrl?: string } }
+  | { readonly type: "raceComparison"; readonly data: { raceCategory: string; office: string } }
   | { readonly type: "voterServices"; readonly data: {
       address: string;
       pollingPlace?: { name: string; address: string; hours?: string };
