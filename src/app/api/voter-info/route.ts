@@ -3,7 +3,7 @@ import FirecrawlApp from "@mendable/firecrawl-js";
 
 export async function POST(req: Request) {
   try {
-    const { address, city, zip, action } = await req.json();
+    const { address, city, zip } = await req.json();
 
     if (!address) {
       return NextResponse.json({ error: "address is required" }, { status: 400 });
@@ -11,79 +11,58 @@ export async function POST(req: Request) {
 
     const resolvedCity = city || "Milwaukee";
     const resolvedZip = zip || "";
-    const tool = action ?? "ballot";
-
-    const urls: Record<string, string> = {
-      "polling-place": "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
-      "ballot": "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
-    };
-    const targetUrl = urls[tool] ?? urls["ballot"];
 
     const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY! });
 
-    // Step 1: Create a Firecrawl Browser session
-    const session = await firecrawl.browser({ ttl: 120, activityTtl: 60 });
-    const sessionId = session.id;
-    console.log(`[voter-info] Firecrawl Browser session:`, JSON.stringify(session).slice(0, 300));
+    // Step 1: Scrape the page to get a scrapeId for interact
+    const scrapeResult = await firecrawl.scrape(
+      "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
+      { formats: ["markdown"] },
+    );
 
-    if (!sessionId) {
+    const scrapeId = (scrapeResult as unknown as { metadata?: { scrapeId?: string } }).metadata?.scrapeId;
+
+    if (!scrapeId) {
       return NextResponse.json({
         success: false,
-        error: `Browser session creation failed: ${JSON.stringify(session).slice(0, 200)}`,
+        error: "Could not create browser session",
         rawContent: "",
         links: { pollingPlace: "https://myvote.wi.gov/en-us/Find-My-Polling-Place" },
       });
     }
 
-    try {
-      // Step 2: All-in-one — navigate, fill, submit, wait, extract
-      const navResult = await firecrawl.browserExecute(sessionId, {
-        language: "bash",
-        code: [
-          `agent-browser goto "${targetUrl}"`,
-          `agent-browser wait --load networkidle`,
-          `agent-browser fill @e30 "${address.replace(/"/g, '\\"')}"`,
-          `agent-browser fill @e32 "${resolvedCity.replace(/"/g, '\\"')}"`,
-          `agent-browser fill @e33 "${resolvedZip.replace(/"/g, '\\"')}"`,
-          `agent-browser click @e35`,
-          `agent-browser wait --load networkidle`,
-          `sleep 3`,
-          `agent-browser text`,
-        ].join(" && "),
-      });
+    console.log(`[voter-info] ScrapeId: ${scrapeId}`);
 
-      console.log(`[voter-info] Result: ${navResult.stdout?.length ?? 0} chars, success: ${navResult.success}`);
+    // Step 2: Use interact with a PROMPT — same as the playground
+    const interactResult = await firecrawl.interact(scrapeId, {
+      prompt: `Fill in the polling place search form with this address: Street Address: "${address}", City: "${resolvedCity}", Zip: "${resolvedZip}". Then click the Search button and wait for results. After the results load, tell me the polling place name, address, hours, and ward number.`,
+    });
 
-      const rawContent = navResult.stdout || "";
-      const races: Array<{ office: string; candidates: string[] }> = [];
+    console.log(`[voter-info] Interact result:`, JSON.stringify(interactResult).slice(0, 500));
 
-      return NextResponse.json({
-        success: true,
-        address,
-        city: resolvedCity,
-        zip: resolvedZip,
-        tool,
-        sourceUrl: targetUrl,
-        rawContent: typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent),
-        races,
-        _debug: {
-          navResult: navResult ? { stdout: navResult.stdout?.slice(0, 200), stderr: navResult.stderr?.slice(0, 200), success: navResult.success } : null,
-          snapResult: snap ? { stdout: snap.stdout?.slice(0, 500), stderr: snap.stderr?.slice(0, 200), success: snap.success } : null,
-          textResult: textResult ? { stdout: textResult.stdout?.slice(0, 200), stderr: textResult.stderr?.slice(0, 200), success: textResult.success, result: String(textResult.result ?? "").slice(0, 200) } : null,
-        },
-        nextElection: "Tuesday, April 7, 2026 — Spring Election",
-        daysUntilElection: Math.max(0, Math.ceil((new Date("2026-04-07").getTime() - Date.now()) / (1000 * 60 * 60 * 24))),
-        links: {
-          pollingPlace: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
-          ballot: "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
-          registration: "https://myvote.wi.gov/en-us/Register-To-Vote",
-          absentee: "https://myvote.wi.gov/en-us/Vote-Absentee-By-Mail",
-          trackBallot: "https://myvote.wi.gov/en-us/Track-My-Ballot",
-        },
-      });
-    } finally {
-      await firecrawl.deleteBrowser(sessionId).catch(() => {});
-    }
+    const output = (interactResult as unknown as { output?: string }).output ?? "";
+    const rawContent = output || JSON.stringify(interactResult);
+
+    // Stop the interaction session
+    await firecrawl.stopInteraction(scrapeId).catch(() => {});
+
+    return NextResponse.json({
+      success: true,
+      address,
+      city: resolvedCity,
+      zip: resolvedZip,
+      sourceUrl: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
+      rawContent,
+      nextElection: "Tuesday, April 7, 2026 — Spring Election",
+      daysUntilElection: Math.max(0, Math.ceil((new Date("2026-04-07").getTime() - Date.now()) / (1000 * 60 * 60 * 24))),
+      links: {
+        pollingPlace: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
+        ballot: "https://myvote.wi.gov/en-us/Whats-On-My-Ballot",
+        registration: "https://myvote.wi.gov/en-us/Register-To-Vote",
+        absentee: "https://myvote.wi.gov/en-us/Vote-Absentee-By-Mail",
+        trackBallot: "https://myvote.wi.gov/en-us/Track-My-Ballot",
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[voter-info] Error:", message);
@@ -91,7 +70,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: false,
       error: message,
-      rawContent: "Visit myvote.wi.gov directly to check your voter info.",
+      rawContent: "",
       nextElection: "Tuesday, April 7, 2026 — Spring Election",
       links: {
         pollingPlace: "https://myvote.wi.gov/en-us/Find-My-Polling-Place",
