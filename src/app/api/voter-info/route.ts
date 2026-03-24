@@ -56,22 +56,22 @@ export async function POST(req: Request) {
 
     console.log(`[voter-info] Tool: ${tool}, ScrapeId: ${scrapeId}`);
 
-    // Step 2: Fill form and submit
+    // Step 2: Single interact call — fill + submit + extract (must fit in 60s)
     const fillFn = config.fillPrompt as unknown as (a: string, c: string, z: string) => string;
-    await firecrawl.interact(scrapeId, {
-      prompt: fillFn(address, resolvedCity, resolvedZip),
+    const combinedPrompt = `${fillFn(address, resolvedCity, resolvedZip)} After the results load, ${config.extractPrompt.toLowerCase()}`;
+
+    console.log(`[voter-info] Running combined prompt for ${tool}`);
+
+    const interactResult = await firecrawl.interact(scrapeId, {
+      prompt: combinedPrompt,
+      timeout: 55,
     });
 
-    console.log(`[voter-info] Form submitted for ${tool}`);
-
-    // Step 3: Extract data from results
-    const extractResult = await firecrawl.interact(scrapeId, {
-      prompt: config.extractPrompt,
-    });
-
-    const output = (extractResult as unknown as { output?: string }).output ?? "";
-    const stdout = (extractResult as unknown as { stdout?: string }).stdout ?? "";
+    const output = (interactResult as unknown as { output?: string }).output ?? "";
+    const stdout = (interactResult as unknown as { stdout?: string }).stdout ?? "";
     const rawContent = output || stdout || "";
+
+    console.log(`[voter-info] Result: output=${output.length} chars, stdout=${stdout.length} chars`);
 
     // Stop session
     await firecrawl.stopInteraction(scrapeId).catch(() => {});
