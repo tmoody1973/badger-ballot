@@ -55,7 +55,8 @@ export async function POST(req: Request) {
     });
 
     const scrapeResult = await scrapeResponse.json();
-    const scrapeId = scrapeResult?.metadata?.scrapeId ?? scrapeResult?.scrapeId;
+    const scrapeId = scrapeResult?.data?.metadata?.scrapeId ?? scrapeResult?.metadata?.scrapeId ?? scrapeResult?.scrapeId;
+    console.log(`[voter-info] Scrape response keys: ${JSON.stringify(Object.keys(scrapeResult))}, scrapeId: ${scrapeId}`);
     if (!scrapeId) {
       return NextResponse.json({
         success: false,
