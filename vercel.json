@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "src/app/api/voter-info/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/receipts/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/deep-dive/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/finance/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
