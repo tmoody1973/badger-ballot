@@ -132,17 +132,13 @@ export function toOpenUILang(data: ReceiptsData): string {
     });
   }
 
-  // Root container
+  // Build final output: define children first, then root references them
   const sourceCount = String(data.source_count ?? 0);
-  const title = `${data.candidate?.name ?? "Candidate"} — Findings`;
-  const rootLine = `root = FindingsStack("${esc(title)}", "${sourceCount}")`;
+  const title = `${data.candidate?.name ?? "Candidate"} \u2014 Findings`;
 
-  // Build final output: root first, then children via <<
-  const output = [rootLine];
-  for (const child of children) {
-    output.push(`root << ${child}`);
-  }
-  output.push(...lines);
+  // OpenUI Lang syntax: children defined first, root last with array reference
+  const output = [...lines];
+  output.push(`root = FindingsStack("${esc(title)}", "${sourceCount}", [${children.join(", ")}])`);
 
   return output.join("\n");
 }

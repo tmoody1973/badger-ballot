@@ -234,25 +234,6 @@ export const PolicyPosition = defineComponent({
   ),
 });
 
-// ── FindingsStack ───────────────────────────────
-export const FindingsStack = defineComponent({
-  name: "FindingsStack",
-  description: "Container for a collection of findings about a candidate. Use as root.",
-  props: z.object({
-    title: z.string().describe("Section title like 'Tom Tiffany — Findings'"),
-    sourceCount: z.string().optional().describe("Number of sources found"),
-  }),
-  component: ({ props, renderNode }) => (
-    <div className="p-5 max-w-3xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-heading text-foreground">{props.title}</h2>
-        {props.sourceCount && <span className="text-xs font-mono text-muted-foreground">{props.sourceCount} sources</span>}
-      </div>
-      {renderNode && renderNode([])}
-    </div>
-  ),
-});
-
 // ── BallotMeasure ───────────────────────────────
 export const BallotMeasure = defineComponent({
   name: "BallotMeasure",
@@ -288,4 +269,33 @@ export const BallotMeasure = defineComponent({
       </div>
     );
   },
+});
+
+// ── FindingsStack (must be last — references all other components) ──
+export const FindingsStack = defineComponent({
+  name: "FindingsStack",
+  description: "Container for a collection of findings about a candidate. Use as root.",
+  props: z.object({
+    title: z.string().describe("Section title like 'Tom Tiffany — Findings'"),
+    sourceCount: z.string().optional().describe("Number of sources found"),
+    items: z.array(z.union([
+      CandidateProfile.ref,
+      VoteCard.ref,
+      DonorList.ref,
+      FactCheck.ref,
+      NewsItem.ref,
+      EndorsementBadge.ref,
+      PolicyPosition.ref,
+      BallotMeasure.ref,
+    ])).optional().describe("Array of finding components"),
+  }),
+  component: ({ props, renderNode }) => (
+    <div className="p-5 max-w-3xl mx-auto space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-heading text-foreground">{props.title}</h2>
+        {props.sourceCount && <span className="text-xs font-mono text-muted-foreground">{props.sourceCount} sources</span>}
+      </div>
+      {props.items && renderNode(props.items)}
+    </div>
+  ),
 });
