@@ -28,79 +28,33 @@ export async function POST(req: Request) {
     const playwrightCode = `
       await page.goto('${targetUrl}');
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(2000);
 
-      // Find and fill the address field
-      const addressInput = page.locator('input[id*="ddress"], input[placeholder*="address" i], input[name*="address" i], input[aria-label*="address" i]').first();
-      if (await addressInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await addressInput.fill('${escapedAddress}');
-      } else {
-        // Try any visible text input
-        const anyInput = page.locator('input[type="text"]:visible').first();
-        if (await anyInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await anyInput.fill('${escapedAddress}');
-        }
-      }
+      // myvote.wi.gov has specific form field IDs
+      // #SearchStreet, #SearchCity, #SearchZip are the key fields
+      await page.fill('#SearchStreet', '${escapedAddress}');
+      await page.fill('#SearchCity', '${escapedCity || "Milwaukee"}');
+      await page.fill('#SearchZip', '${escapedZip || ""}');
 
       await page.waitForTimeout(500);
 
-      ${escapedCity ? `
-      // Fill city
-      const cityInput = page.locator('input[id*="ity"], input[placeholder*="city" i], input[name*="city" i]').first();
-      if (await cityInput.isVisible({ timeout: 1500 }).catch(() => false)) {
-        await cityInput.fill('${escapedCity}');
-      }
-      ` : ""}
+      // Click the search button - "Find My Polling Place"
+      const submitBtn = page.locator('button:has-text("Find My Polling Place"), button:has-text("Search"), input[type="submit"]').first();
+      await submitBtn.click();
 
-      ${escapedZip ? `
-      // Fill zip
-      const zipInput = page.locator('input[id*="ip"], input[placeholder*="zip" i], input[name*="zip" i]').first();
-      if (await zipInput.isVisible({ timeout: 1500 }).catch(() => false)) {
-        await zipInput.fill('${escapedZip}');
-      }
-      ` : ""}
-
-      // Submit
-      const submitBtn = page.locator('button:has-text("Search"), button:has-text("Find"), input[type="submit"], button[type="submit"]').first();
-      if (await submitBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await submitBtn.click();
-      } else {
-        await page.keyboard.press('Enter');
-      }
-
+      // Wait for results to load
       await page.waitForTimeout(5000);
+      await page.waitForLoadState('networkidle');
 
       // Extract the visible results
       const url = page.url();
       const bodyText = await page.evaluate(() => document.body.innerText) || '';
 
-      // Try to extract structured data
-      let pollingPlace = '';
-      let ballotInfo = '';
-      let registrationInfo = '';
-
-      // Look for polling place info
-      const pollingSection = page.locator('text=Polling Place, text=Your polling, text=Where you vote').first();
-      if (await pollingSection.isVisible({ timeout: 1000 }).catch(() => false)) {
-        const parent = pollingSection.locator('..').first();
-        pollingPlace = await parent.innerText().catch(() => '') || '';
-      }
-
-      // Look for ballot preview
-      const ballotSection = page.locator('text=Ballot, text=Your ballot, text=On your ballot').first();
-      if (await ballotSection.isVisible({ timeout: 1000 }).catch(() => false)) {
-        const parent = ballotSection.locator('..').first();
-        ballotInfo = await parent.innerText().catch(() => '') || '';
-      }
-
       return {
         url,
         tool: '${tool}',
         address: '${escapedAddress}',
-        pollingPlace: pollingPlace.slice(0, 1000),
-        ballotInfo: ballotInfo.slice(0, 2000),
-        registrationInfo: registrationInfo.slice(0, 500),
-        bodyText: bodyText.slice(0, 3000),
+        bodyText: bodyText.slice(0, 4000),
       };
     `;
 
@@ -110,24 +64,16 @@ export async function POST(req: Request) {
     if (browserResult.success) {
       const result = browserResult.result as {
         url?: string;
-        tool?: string;
-        address?: string;
-        pollingPlace?: string;
-        ballotInfo?: string;
-        registrationInfo?: string;
         bodyText?: string;
       };
 
       return NextResponse.json({
         success: true,
         address,
-        city,
+        city: city || "Milwaukee",
         zip,
         tool,
         sourceUrl: result?.url ?? targetUrl,
-        pollingPlace: result?.pollingPlace ?? null,
-        ballotInfo: result?.ballotInfo ?? null,
-        registrationInfo: result?.registrationInfo ?? null,
         rawContent: result?.bodyText ?? "",
         nextElection: "Tuesday, April 7, 2026 — Spring Election",
       });
