@@ -1,0 +1,32 @@
+{
+    "type": "client",
+    "name": "set_filter",
+    "description": "Change the race category filter in the directory. Call this when the user asks about a specific type of race.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": [
+            "filter"
+        ],
+        "description": "",
+        "properties": {
+            "filter": {
+                "type": "string",
+                "description": "The race category: all, governor, supreme_court, attorney_general, house, senate, ballot",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            }
+        }
+    },
+    "expects_response": false,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}

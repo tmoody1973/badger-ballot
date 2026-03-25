@@ -1,0 +1,40 @@
+{
+    "type": "client",
+    "name": "deep_dive",
+    "description": "Go deeper on a specific topic for a candidate. Use when the user says 'go deeper', 'tell me more about their donors', 'dig into their voting record', 'what about their campaign finance', or any request for more detail on a specific angle. The app will show a progress animation and then display detailed findings on screen. Returns immediately so you can keep talking.",
+    "response_timeout_secs": 5,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": [
+            "candidate",
+            "angle"
+        ],
+        "description": "Go deeper on a specific topic for a candidate. Results appear on screen.",
+        "properties": {
+            "candidate": {
+                "type": "string",
+                "description": "The candidate's full name (e.g. 'Tom Tiffany', 'Chris Taylor', 'Mandela Barnes')",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "angle": {
+                "type": "string",
+                "description": "The topic to dive deeper on. Examples: 'donors and campaign finance', 'voting record', 'news coverage', 'endorsements', 'policy positions', 'fact checks'",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            }
+        }
+    },
+    "expects_response": false,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}

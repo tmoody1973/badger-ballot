@@ -1,0 +1,74 @@
+{
+    "tools": [
+        {
+            "type": "client",
+            "config": "tool_configs/show_race_comparison.json",
+            "id": "tool_5101kmeyyh1nfvy8dw8djxkg4tn7"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/lookup_voter_info.json",
+            "id": "tool_9701kmenb8bsevh88hfkkgwbtxvp"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/show_measure.json",
+            "id": "tool_3801km5tdr3dfxq921nrg5k5znby"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/clear_results.json",
+            "id": "tool_7001km5td1qee4d8aev8ymc137jq"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/show_fact_check.json",
+            "id": "tool_1001km5td0y9fm2tkpk93j2va8hc"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/select_candidate.json",
+            "id": "tool_1401km5td1cxepas878w4dbmza59"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/show_endorsement.json",
+            "id": "tool_2901km5td12yeby9ah8q839ppen7"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/set_filter.json",
+            "id": "tool_2901km5td1jbe1abhb5ack6nj9c2"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/show_candidate.json",
+            "id": "tool_0201km5s57q4e73ay7nhp1bc22s8"
+        },
+        {
+            "type": "webhook",
+            "config": "tool_configs/candidate_profile.json",
+            "id": "tool_5101km5p8f4teh5tqbyaze4s2d4x"
+        },
+        {
+            "type": "webhook",
+            "config": "tool_configs/deep_dive.json",
+            "id": "tool_0601km5p1cb9fvhtx9eh5wjfz7y7"
+        },
+        {
+            "type": "webhook",
+            "config": "tool_configs/pull_receipts.json",
+            "id": "tool_9701km5ne0tef0bvfn7eqr1y3mhr"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/show_donors-1.json",
+            "id": "tool_6901km5td0rhf4ztdfrt68ebswr9"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/show_vote-2.json",
+            "id": "tool_2601km5tbz7jebat5z2cc9dr5vae"
+        }
+    ]
+}

@@ -1,0 +1,46 @@
+{
+    "type": "webhook",
+    "name": "pull_receipts",
+    "description": "Search the web for a candidate's voting record, campaign donors, fact checks, endorsements, news coverage, and platform positions. Use this when the user asks about a candidate or says \"pull the receipts.\" Returns structured data that you should narrate and display using client tools.\n",
+    "response_timeout_secs": 48,
+    "disable_interruptions": true,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate",
+    "api_schema": {
+        "request_headers": {},
+        "url": "https://badger-ballot.vercel.app/api/receipts",
+        "method": "POST",
+        "path_params_schema": {},
+        "request_body_schema": {
+            "type": "object",
+            "required": [
+                "candidate",
+                "topic"
+            ],
+            "description": "Search the web for a candidate's voting record, campaign donors, fact checks, endorsements, news coverage, and platform positions. Returns structured findings from Firecrawl search and Claude synthesis.",
+            "properties": {
+                "candidate": {
+                    "type": "string",
+                    "description": "The candidate's name or ID to research. Use IDs when possible: tiffany, barnes, rodriguez, roys, hong, crowley, vanorden, cooke, steil, taylor, lazar, kaul, toney, dei-amend, worship-amend, veto-amend. If the user says \"Tom Tiffany\", use \"tiffany\".",
+                    "is_system_provided": false,
+                    "dynamic_variable": "",
+                    "constant_value": ""
+                },
+                "topic": {
+                    "type": "string",
+                    "description": "The specific topic the user asked about, e.g., \"public lands\", \"abortion\", \"donors\", \"education\", \"Jan 6\". Leave empty if no specific topic is mentioned.",
+                    "is_system_provided": false,
+                    "dynamic_variable": "",
+                    "constant_value": ""
+                }
+            }
+        },
+        "content_type": "application/json"
+    }
+}

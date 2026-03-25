@@ -1,0 +1,80 @@
+{
+    "type": "client",
+    "name": "show_candidate",
+    "description": "Display a candidate profile card in the UI. Call this when you first mention a candidate in your narration.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": [
+            "name",
+            "party",
+            "office",
+            "currentRole",
+            "keyFact",
+            "findingsCount",
+            "severity"
+        ],
+        "description": "",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "The candidate's full name from the pull_receipts results",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "party": {
+                "type": "string",
+                "description": "Political party: \"Republican\", \"Democrat\", \"Independent\", or \"Nonpartisan\"",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "office": {
+                "type": "string",
+                "description": "The office they are running for, e.g., \"Governor\", \"U.S. House WI-3\", \"Supreme Court\"",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "current_role": {
+                "type": "string",
+                "description": "Their current position, e.g., \"U.S. Rep, WI-7\", \"Lt. Governor\"",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "key_fact": {
+                "type": "string",
+                "description": "The single most notable fact about this candidate",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "findings_count": {
+                "type": "string",
+                "description": "How many findings were returned from the search (Number type)",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "severity": {
+                "type": "string",
+                "description": "\"high\" if major controversies found, \"medium\" if notable findings, \"low\" if routine",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            }
+        }
+    },
+    "expects_response": false,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}

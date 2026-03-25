@@ -1,0 +1,53 @@
+{
+    "type": "client",
+    "name": "lookup_voter_info",
+    "description": "Look up voter registration, polling place, and ballot information using the voters address. Use when the user provides their address or asks where to vote, what is on their ballot, or how to register. This navigates myvote.wi.gov in real time.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": [
+            "address"
+        ],
+        "description": "",
+        "properties": {
+            "address": {
+                "type": "string",
+                "description": "The voters street address, e.g. 123 Main St",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "city": {
+                "type": "string",
+                "description": "City name, e.g. Milwaukee, Madison",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "zip": {
+                "type": "string",
+                "description": "ZIP code",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "action": {
+                "type": "string",
+                "description": "What to look up: polling-place, ballot, or registration. Default: polling-place",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            }
+        }
+    },
+    "expects_response": true,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}

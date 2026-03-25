@@ -1,0 +1,63 @@
+{
+    "type": "client",
+    "name": "show_endorsement",
+    "description": "Display an endorsement card. Call this when you mention who has endorsed a candidate.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": [
+            "endorser",
+            "type",
+            "context",
+            "candidate"
+        ],
+        "description": "",
+        "properties": {
+            "endorser": {
+                "type": "string",
+                "description": "Name of the person or organization giving the endorsement",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "type": {
+                "type": "string",
+                "description": "Type: Organization, Individual, Union, Newspaper, Elected Official",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "context": {
+                "type": "string",
+                "description": "Why this endorsement matters or what was said",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "source_url": {
+                "type": "string",
+                "description": "The URL where this endorsement was reported",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "candidate": {
+                "type": "string",
+                "description": "The candidate who was endorsed",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            }
+        }
+    },
+    "expects_response": false,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}

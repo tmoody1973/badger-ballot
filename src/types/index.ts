@@ -130,6 +130,17 @@ export type RenderedComponent =
   | { readonly type: "pollingPlace"; readonly data: { address: string; rawContent: string; sourceUrl: string; nextElection: string; daysUntilElection: number } }
   | { readonly type: "ballotPreview"; readonly data: { address: string; rawContent: string; sourceUrl: string; nextElection: string; daysUntilElection: number } }
   | { readonly type: "registration"; readonly data: { address: string; rawContent: string; sourceUrl: string; nextElection: string; daysUntilElection: number } }
+  | { readonly type: "deepDiveProgress"; readonly data: { candidate: string; angle: string; status: "searching" | "complete"; sourceCount?: number } }
+  | { readonly type: "deepDiveHeader"; readonly data: { candidate: string; angle: string; sourceCount: number } }
+  | { readonly type: "deepDiveResults"; readonly data: {
+      candidate: string; angle: string; sourceCount: number;
+      votes?: Array<{ bill: string; vote: string; context: string; date?: string; source: string; sourceUrl?: string }>;
+      donors?: { donors: Array<{ name: string; amount: string; type: string; cycle: string }>; totalRaised?: string; source: string; sourceUrl?: string } | null;
+      factChecks?: Array<{ claim: string; rating: string; source: string; sourceUrl?: string; year: string }>;
+      news?: Array<{ headline: string; source: string; sourceUrl?: string; date?: string; summary: string }>;
+      endorsements?: Array<{ endorser: string; type: string; context: string; sourceUrl?: string }>;
+      platform?: Array<{ issue: string; position: string; source: string; sourceUrl?: string }>;
+    } }
   | { readonly type: "voterServices"; readonly data: {
       address: string;
       pollingPlace?: { name: string; address: string; hours?: string };

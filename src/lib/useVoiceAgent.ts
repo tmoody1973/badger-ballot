@@ -93,8 +93,8 @@ export function useVoiceAgent({
 
         if (match) {
           onComponentAdd({ type: "candidate", data: match });
-          // Trigger the full search flow — renders digging progress + results
-          onCandidateResearch(match.id);
+          // Use ensureResearch so the dedup guard prevents double-triggers
+          ensureResearch(match.name);
         } else {
           onComponentAdd({
             type: "candidate",
@@ -249,6 +249,7 @@ export function useVoiceAgent({
         action?: string;
       }) => {
         const action = params.action ?? "polling-place";
+        const resolvedCity = params.city || "Milwaukee";
         const labels: Record<string, string> = {
           "polling-place": "Looking up your polling place",
           "ballot": "Checking what's on your ballot",
@@ -257,15 +258,26 @@ export function useVoiceAgent({
         onStatusChange(`${labels[action] ?? "Looking up voter info"} for ${params.address}... This takes about 30 seconds.`);
 
         // Fire and forget — don't await, return immediately
-        // Use AbortSignal for 2-minute timeout (ballot takes ~70 seconds)
         fetch("/api/voter-info", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(params),
-          signal: AbortSignal.timeout(120000),
+          body: JSON.stringify({
+            address: params.address,
+            city: resolvedCity,
+            zip: params.zip ?? "",
+            action,
+          }),
+          signal: AbortSignal.timeout(110_000),
         })
-          .then((res) => res.json())
+          .then((res) => {
+            if (!res.ok) throw new Error(`Server returned ${res.status}`);
+            return res.json();
+          })
           .then((data) => {
+            if (!data.success) {
+              onStatusChange(`Voter lookup failed: ${data.error ?? "unknown error"}. Try myvote.wi.gov directly.`);
+              return;
+            }
             const componentType = action === "ballot" ? "ballotPreview"
               : action === "registration" ? "registration"
               : "pollingPlace";
@@ -273,7 +285,7 @@ export function useVoiceAgent({
             onComponentAdd({
               type: componentType as "pollingPlace",
               data: {
-                address: `${params.address}, ${params.city ?? "Milwaukee"}, WI ${params.zip ?? ""}`,
+                address: `${params.address}, ${resolvedCity}, WI ${params.zip ?? ""}`,
                 rawContent: data.rawContent ?? "",
                 sourceUrl: data.sourceUrl ?? "https://myvote.wi.gov",
                 nextElection: data.nextElection ?? "Tuesday, April 7, 2026",
@@ -282,12 +294,82 @@ export function useVoiceAgent({
             });
             onStatusChange(`Found your ${action === "ballot" ? "ballot" : action === "registration" ? "registration" : "polling place"} info.`);
           })
-          .catch(() => {
+          .catch((err) => {
+            console.error("[lookup_voter_info] Failed:", err);
             onStatusChange("Couldn't look up voter info. Visit myvote.wi.gov directly.");
           });
 
         // Return immediately so voice agent continues talking
-        return `Looking up voter info for ${params.address}. The results will appear on screen in about 30 seconds. In the meantime, tell the user their next election is Tuesday April 7, 2026 and remind them to bring a photo ID.`;
+        return `Looking up voter info for ${params.address}, ${resolvedCity}. The results will appear on screen in about 30 seconds. In the meantime, tell the user their next election is Tuesday April 7, 2026 and remind them to bring a photo ID.`;
+      },
+
+      // Deep dive — "go deeper on donors", "tell me more about their votes"
+      // NON-BLOCKING: fires request, returns immediately so voice keeps talking
+      deep_dive: (params: { candidate: string; angle: string }) => {
+        const match = CANDIDATES.find(
+          (c) =>
+            c.name.toLowerCase() === params.candidate?.toLowerCase() ||
+            params.candidate?.toLowerCase().includes(c.name.split(" ").pop()?.toLowerCase() ?? ""),
+        );
+        const candidateId = match?.id ?? params.candidate?.toLowerCase().replace(/\s+/g, "-");
+        const candidateName = match?.name ?? params.candidate;
+
+        onStatusChange(`Digging deeper into ${candidateName}'s ${params.angle}...`);
+
+        // Show progress card immediately
+        onComponentAdd({
+          type: "deepDiveProgress",
+          data: { candidate: candidateName, angle: params.angle, status: "searching" as const },
+        });
+
+        fetch("/api/deep-dive", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ candidate: candidateId, angle: params.angle }),
+          signal: AbortSignal.timeout(60_000),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`Server returned ${res.status}`);
+            return res.json();
+          })
+          .then((data) => {
+            const sourceCount = data.source_count ?? 0;
+
+            // Mark progress as complete (hides the progress card)
+            onComponentAdd({
+              type: "deepDiveProgress",
+              data: { candidate: candidateName, angle: params.angle, status: "complete" as const, sourceCount },
+            });
+
+            // Add ALL deep dive results as a single self-contained block
+            onComponentAdd({
+              type: "deepDiveResults",
+              data: {
+                candidate: candidateName,
+                angle: params.angle,
+                sourceCount,
+                votes: data.votes ?? [],
+                donors: data.donors ?? null,
+                factChecks: data.factChecks ?? [],
+                news: data.news ?? [],
+                endorsements: data.endorsements ?? [],
+                platform: data.platform ?? [],
+              },
+            });
+
+            onStatusChange(`Deep dive complete. Found ${sourceCount} sources on ${params.angle}.`);
+          })
+          .catch((err) => {
+            console.error("[deep_dive] Failed:", err);
+            // Mark progress as complete to hide it
+            onComponentAdd({
+              type: "deepDiveProgress",
+              data: { candidate: candidateName, angle: params.angle, status: "complete" as const },
+            });
+            onStatusChange("Deep dive failed. Try asking again.");
+          });
+
+        return `Digging deeper into ${candidateName}'s ${params.angle}. Results will appear on screen in about 15 seconds. In the meantime, share what you already know about this topic from the initial research.`;
       },
 
       // Navigation client tools — agent controls the UI

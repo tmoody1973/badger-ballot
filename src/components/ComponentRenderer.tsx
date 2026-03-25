@@ -17,6 +17,9 @@ import { RaceComparison } from "./RaceComparison";
 import { PollingPlaceCard } from "./PollingPlaceCard";
 import { BallotPreviewCard } from "./BallotPreviewCard";
 import { RegistrationCard } from "./RegistrationCard";
+import { DeepDiveProgress } from "./DeepDiveProgress";
+import { DeepDiveHeader } from "./DeepDiveHeader";
+import { DeepDiveResults } from "./DeepDiveResults";
 
 interface ComponentRendererProps {
   readonly components: readonly RenderedComponent[];
@@ -56,6 +59,9 @@ export function ComponentRenderer({ components }: ComponentRendererProps) {
   const measures = components.filter((c) => c.type === "measure");
   const charts = components.filter((c) => c.type === "fundraisingChart");
   const filings = components.filter((c) => c.type === "financeFiling");
+  const deepDiveProgress = components.filter((c) => c.type === "deepDiveProgress");
+  const deepDiveHeaders = components.filter((c) => c.type === "deepDiveHeader");
+  const deepDiveResults = components.filter((c) => c.type === "deepDiveResults");
   const voterInfo = components.filter((c) => c.type === "voterInfo");
   const voterServices = components.filter((c) => c.type === "voterServices");
   const raceComparisons = components.filter((c) => c.type === "raceComparison");
@@ -217,6 +223,41 @@ export function ComponentRenderer({ components }: ComponentRendererProps) {
           </div>
         </>
       )}
+
+      {/* Show only the latest deep dive progress per angle, hide if complete */}
+      {deepDiveProgress
+        .filter((c) => c.data.status === "searching")
+        .filter((c, _i, arr) => {
+          // Only show if no "complete" status exists for this angle
+          const hasComplete = deepDiveProgress.some(
+            (other) => other.data.angle === c.data.angle && other.data.status === "complete",
+          );
+          // Also only show the last one per angle
+          const isLast = arr.filter((a) => a.data.angle === c.data.angle).pop() === c;
+          return !hasComplete && isLast;
+        })
+        .map((c, i) => (
+          <DeepDiveProgress
+            key={`ddp-${i}`}
+            candidate={c.data.candidate}
+            angle={c.data.angle}
+            status={c.data.status}
+            sourceCount={c.data.sourceCount}
+          />
+        ))}
+
+      {deepDiveHeaders.map((c, i) => (
+        <DeepDiveHeader
+          key={`ddh-${i}`}
+          candidate={c.data.candidate}
+          angle={c.data.angle}
+          sourceCount={c.data.sourceCount}
+        />
+      ))}
+
+      {deepDiveResults.map((c, i) => (
+        <DeepDiveResults key={`ddr-${i}`} data={c.data} />
+      ))}
 
       {measures.length > 0 && (
         <>

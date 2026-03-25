@@ -89,6 +89,7 @@ export async function fireplexitySearch(
           },
           ...(sq.tbs ? { tbs: sq.tbs } : {}),
         }),
+        signal: AbortSignal.timeout(30_000),
       });
 
       if (!response.ok) return [];
@@ -140,7 +141,7 @@ export async function fireplexitySearch(
       return `[${index + 1}] ${source.title}\nURL: ${source.url}\n${relevant}`;
     })
     .join("\n\n---\n\n")
-    .slice(0, 10000);
+    .slice(0, 8000);
 
   // Step 3: Synthesis — use Groq if available, fall back to Claude
   let synthesis = "";

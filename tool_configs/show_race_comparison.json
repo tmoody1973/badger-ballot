@@ -1,0 +1,40 @@
+{
+    "type": "client",
+    "name": "show_race_comparison",
+    "description": "Show a horizontal carousel comparing all candidates in a race side by side with scorecards. Use when the user asks to compare candidates or asks who is running in a specific race.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": [
+            "raceCategory",
+            "office"
+        ],
+        "description": "",
+        "properties": {
+            "race_category": {
+                "type": "string",
+                "description": "The race category: governor, supreme_court, attorney_general, house, senate, ballot",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "office": {
+                "type": "string",
+                "description": "The specific office like Governor, Supreme Court, U.S. House WI-3, Attorney General",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            }
+        }
+    },
+    "expects_response": false,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}

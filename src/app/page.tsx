@@ -386,7 +386,7 @@ export default function BallotBadger() {
             />
           )}
           {/* Digging progress while search is running */}
-          {isLoading && components.length <= 1 && selectedCandidate && (
+          {isLoading && selectedCandidate && (
             <div className="p-5 max-w-3xl mx-auto">
               <DiggingProgress
                 candidate={selectedCandidate}

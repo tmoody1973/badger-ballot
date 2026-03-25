@@ -1,0 +1,32 @@
+{
+    "type": "client",
+    "name": "select_candidate",
+    "description": "Select and highlight a candidate in the directory sidebar. Call this when switching to a new candidate.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": [
+            "candidate_id"
+        ],
+        "description": "",
+        "properties": {
+            "candidate_id": {
+                "type": "string",
+                "description": "The candidate ID: tiffany, barnes, rodriguez, roys, hong, crowley, vanorden, cooke, steil, taylor, lazar, kaul, toney, dei-amend, worship-amend, veto-amend",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            }
+        }
+    },
+    "expects_response": false,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}

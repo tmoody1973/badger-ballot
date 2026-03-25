@@ -1,0 +1,45 @@
+{
+    "type": "webhook",
+    "name": "candidate_profile",
+    "description": "Get a quick profile of a candidate or list all candidates. Use this for simple \"who is\" or \"who's running\" questions before doing a full search.",
+    "response_timeout_secs": 13,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": true,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate",
+    "api_schema": {
+        "request_headers": {},
+        "url": "https://badger-ballot.vercel.app/api/candidate",
+        "method": "POST",
+        "path_params_schema": {},
+        "request_body_schema": {
+            "type": "object",
+            "required": [
+                "angle"
+            ],
+            "description": "Get a quick profile of a candidate or list all candidates. Use for simple \"who is\" or \"who's running\" questions.",
+            "properties": {
+                "candidate": {
+                    "type": "string",
+                    "description": "The candidate's name or ID to look up. If the user asks \"who's running\" or \"show me all candidates\", leave this empty to get the full directory.",
+                    "is_system_provided": false,
+                    "dynamic_variable": "",
+                    "constant_value": ""
+                },
+                "angle": {
+                    "type": "string",
+                    "description": "The specific topic to dig deeper on, e.g., \"campaign donors\", \"voting record on abortion\", \"Jan 6 involvement\", \"education policy\", \"fundraising\".",
+                    "is_system_provided": false,
+                    "dynamic_variable": "",
+                    "constant_value": ""
+                }
+            }
+        },
+        "content_type": "application/json"
+    }
+}

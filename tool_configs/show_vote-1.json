@@ -1,0 +1,78 @@
+{
+    "type": "client",
+    "name": "show_vote",
+    "description": "Display a voting record card. Call this when you mention a specific vote or bill.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": [
+            "bill",
+            "vote",
+            "context",
+            "source",
+            "candidate"
+        ],
+        "description": "",
+        "properties": {
+            "bill": {
+                "type": "string",
+                "description": "Name or number of the bill from the search results",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "vote": {
+                "type": "string",
+                "description": "How they voted: Yea, Nay, Objected, Abstain, Sponsored",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "context": {
+                "type": "string",
+                "description": "2-3 sentence explanation of what this vote means",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "date": {
+                "type": "string",
+                "description": "Date of the vote if found",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "source": {
+                "type": "string",
+                "description": "Source name e.g. Congress.gov",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "source_url": {
+                "type": "string",
+                "description": "The URL where this data was found",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "candidate": {
+                "type": "string",
+                "description": "The candidate who cast this vote",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            }
+        }
+    },
+    "expects_response": false,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}

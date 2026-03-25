@@ -1,0 +1,54 @@
+{
+    "type": "client",
+    "name": "show_measure",
+    "description": "Display a ballot measure card with for and against arguments. Call this for constitutional amendments.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": [
+            "title",
+            "summary"
+        ],
+        "description": "",
+        "properties": {
+            "title": {
+                "type": "string",
+                "description": "The official or common name of the ballot measure",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "summary": {
+                "type": "string",
+                "description": "Plain language summary of what the measure does",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "sponsors": {
+                "type": "string",
+                "description": "Who sponsored this measure",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "funding": {
+                "type": "string",
+                "description": "Key funding sources",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            }
+        }
+    },
+    "expects_response": false,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}

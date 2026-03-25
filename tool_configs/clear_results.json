@@ -1,0 +1,22 @@
+{
+    "type": "client",
+    "name": "clear_results",
+    "description": "Clear the findings panel before showing new results. Call this before switching to a new candidate.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": [],
+        "description": "",
+        "properties": {}
+    },
+    "expects_response": false,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}

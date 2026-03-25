@@ -1,0 +1,71 @@
+{
+    "type": "client",
+    "name": "show_fact_check",
+    "description": "Display a fact-check badge. Call this when you cite a PolitiFact or other fact-check rating.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": [
+            "claim",
+            "rating",
+            "source",
+            "year",
+            "candidate"
+        ],
+        "description": "",
+        "properties": {
+            "claim": {
+                "type": "string",
+                "description": "The exact claim that was fact-checked",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "rating": {
+                "type": "string",
+                "description": "The rating: True, Mostly True, Half True, Mostly False, False, Pants on Fire",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "source": {
+                "type": "string",
+                "description": "Who did the fact check e.g. PolitiFact",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "source_url": {
+                "type": "string",
+                "description": "The URL to the fact check article",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "year": {
+                "type": "string",
+                "description": "The year the fact check was published",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            },
+            "candidate": {
+                "type": "string",
+                "description": "The candidate associated with the claim",
+                "is_system_provided": false,
+                "dynamic_variable": "",
+                "constant_value": ""
+            }
+        }
+    },
+    "expects_response": false,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}
