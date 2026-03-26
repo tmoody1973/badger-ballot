@@ -108,12 +108,22 @@ Beat.
 
 ---
 
-## END CARD (82-87 seconds)
+## SHOT 8: The badger (82-90 seconds)
+Animated badger character. Pre-rendered 8-second clip.
 
-- Ballot Badger logo
-- `badger-ballot.vercel.app`
-- ElevenLabs + Firecrawl + Groq
+> "Be like me. Before you vote, dig into the candidates and issues with Ballot Badger."
+
+---
+
+## END CARD (90-95 seconds)
+Fade to black from the badger animation (1 second). Hold black for half a second. Then the logo fades in centered, clean, on the black background.
+
+- Ballot Badger logo (white on black)
+- `badger-ballot.vercel.app` below the logo
+- ElevenLabs + Firecrawl + Groq logos smaller underneath
 - `@firecrawl @elevenlabs #ElevenHacks`
+
+Hold 4 seconds. Done.
 
 ---
 
