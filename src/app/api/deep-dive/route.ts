@@ -201,7 +201,7 @@ Rules: Only include data found in the search results. Be aggressive extracting d
       const Anthropic = (await import("@anthropic-ai/sdk")).default;
       const anthropic = new Anthropic();
       const result = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 3000,
         system: `You are a nonpartisan civic research analyst. Deep dive on "${angle}" for ${candidateName}. Return ONLY valid JSON with candidate, votes, donors, factChecks, endorsements, platform, news, summary.`,
         messages: [{ role: "user", content: `Deep dive sources:\n${context}` }],

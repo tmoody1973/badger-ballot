@@ -16,7 +16,7 @@ function incumbentQueries(candidate: string, topic?: string): QueryTemplate {
   return {
     queries: [
       { query: `${candidate} voting record ${t} congress.gov bills`, limit: 5 },
-      { query: `${candidate} campaign donors fundraising opensecrets PAC contributions`, limit: 5 },
+      { query: `${candidate} donors "$" fundraising raised campaign Wisconsin 2026`, limit: 5 },
       { query: `${candidate} ${t} fact check politifact Wisconsin`, limit: 5 },
       { query: `${candidate} Wisconsin 2026 latest news`, limit: 5, tbs: "qdr:m" },
       { query: `${candidate} ${t} position statement policy Wisconsin`, limit: 5 },
@@ -96,8 +96,14 @@ export function getQueryTemplates(
 }
 
 // Known finance data URLs for targeted Firecrawl scrapes
+// Federal candidates → FEC / OpenSecrets; State candidates → Transparency USA
 export const KNOWN_FINANCE_URLS: Record<string, string> = {
-  // Transparency USA — individual donor tables (Firecrawl can scrape these)
+  // Federal — FEC committee pages (Tiffany, Van Orden, Steil, Cooke)
+  tiffany: "https://www.opensecrets.org/members-of-congress/tom-tiffany/summary?cid=N00044798",
+  vanorden: "https://www.opensecrets.org/members-of-congress/derrick-van-orden/summary?cid=N00047344",
+  steil: "https://www.opensecrets.org/members-of-congress/bryan-steil/summary?cid=N00042311",
+  cooke: "https://www.opensecrets.org/races/candidates?cycle=2026&id=WI03",
+  // State — Transparency USA (governor, AG, supreme court)
   barnes: "https://www.transparencyusa.org/wi/candidate/mandela-barnes/contributors",
   rodriguez: "https://www.transparencyusa.org/wi/candidate/sara-rodriguez/contributors",
   roys: "https://www.transparencyusa.org/wi/candidate/kelda-roys/contributors",
@@ -105,7 +111,6 @@ export const KNOWN_FINANCE_URLS: Record<string, string> = {
   crowley: "https://www.transparencyusa.org/wi/candidate/david-crowley/contributors",
   brennan: "https://www.transparencyusa.org/wi/candidate/joel-brennan/contributors",
   hughes: "https://www.transparencyusa.org/wi/candidate/missy-hughes/contributors",
-  tiffany: "https://www.transparencyusa.org/wi/candidate/tom-tiffany/contributors",
   kaul: "https://www.transparencyusa.org/wi/candidate/josh-kaul/contributors",
   toney: "https://www.transparencyusa.org/wi/candidate/eric-toney/contributors",
   taylor: "https://www.transparencyusa.org/wi/candidate/chris-taylor/contributors",

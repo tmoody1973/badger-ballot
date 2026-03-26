@@ -119,7 +119,7 @@ export async function synthesizeReceipts(
   const anthropic = getAnthropic();
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     max_tokens: 2000,
     system: SYNTHESIS_SYSTEM_PROMPT,
     messages: [
@@ -152,7 +152,7 @@ export async function synthesizeDeepDive(
   const anthropic = getAnthropic();
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     max_tokens: 4000,
     system: DEEP_DIVE_SYSTEM_PROMPT,
     messages: [

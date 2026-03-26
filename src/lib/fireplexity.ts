@@ -1,15 +1,12 @@
 /**
- * Fireplexity-pattern search: Firecrawl v2 + Groq synthesis
+ * Fireplexity-pattern search: Firecrawl v2 + Claude synthesis
  * Based on github.com/firecrawl/fireplexity
  *
- * One pipeline: search → score → synthesize → structured output
+ * Pipeline: search + finance scrape → score → synthesize → structured output
  */
 
-import FirecrawlApp from "@mendable/firecrawl-js";
-import { createGroq } from "@ai-sdk/groq";
-import { generateText } from "ai";
 import type { CandidateType } from "@/types";
-import { getQueryTemplates } from "./query-templates";
+import { getQueryTemplates, KNOWN_FINANCE_URLS } from "./query-templates";
 
 // Content selection — adapted from Fireplexity's content-selection.ts
 function selectRelevantContent(content: string, query: string, maxLength = 2000): string {
@@ -63,14 +60,40 @@ export async function fireplexitySearch(
   topic?: string,
 ): Promise<FireplexityResult> {
   const firecrawlKey = process.env.FIRECRAWL_API_KEY;
-  const groqKey = process.env.GROQ_API_KEY;
 
   if (!firecrawlKey) throw new Error("FIRECRAWL_API_KEY not set");
 
-  // Step 1: Firecrawl v2 search with full content (Fireplexity pattern)
-  const templates = getQueryTemplates(candidateType, candidateName, topic);
+  const FC_BASE = "https://api.firecrawl.dev/v2";
+  const fcHeaders = { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" };
 
-  // Use Firecrawl v2 direct API call like Fireplexity does
+  // Step 1: Firecrawl v2 search + finance URL scrape in parallel
+  const templates = getQueryTemplates(candidateType, candidateName, topic);
+  const candidateId = candidateName.split(" ").pop()?.toLowerCase() ?? "";
+
+  // Scrape Transparency USA donor page if we have a URL
+  const financePromise = KNOWN_FINANCE_URLS[candidateId]
+    ? (async () => {
+        try {
+          const res = await fetch(`${FC_BASE}/scrape`, {
+            method: "POST",
+            headers: fcHeaders,
+            body: JSON.stringify({ url: KNOWN_FINANCE_URLS[candidateId], formats: ["markdown"], timeout: 20000 }),
+            signal: AbortSignal.timeout(25_000),
+          });
+          if (!res.ok) return null;
+          const result = await res.json();
+          const md = result?.data?.markdown ?? "";
+          // Only use if the page has substantial donor data (tables, dollar amounts)
+          const hasDonorData = md.length > 500 && (md.includes("$") || md.toLowerCase().includes("contribution"));
+          return hasDonorData ? {
+            url: KNOWN_FINANCE_URLS[candidateId],
+            title: `${candidateName} — Donor Records (Transparency USA)`,
+            description: "", markdown: md.slice(0, 4000),
+          } : null;
+        } catch { return null; }
+      })()
+    : Promise.resolve(null);
+
   const searchPromises = templates.queries.map(async (sq) => {
     try {
       const response = await fetch("https://api.firecrawl.dev/v2/search", {
@@ -118,11 +141,18 @@ export async function fireplexitySearch(
     }
   });
 
-  const allResults = await Promise.all(searchPromises);
+  const [allResults, financeResult] = await Promise.all([
+    Promise.all(searchPromises),
+    financePromise,
+  ]);
 
-  // Deduplicate by URL
+  // Deduplicate by URL — finance data first (highest priority)
   const seen = new Set<string>();
   const sources: Array<{ url: string; title: string; description: string; markdown: string }> = [];
+  if (financeResult && financeResult.url) {
+    seen.add(financeResult.url);
+    sources.push(financeResult);
+  }
   for (const batch of allResults) {
     for (const r of batch) {
       if (r.url && !seen.has(r.url)) {
@@ -141,19 +171,13 @@ export async function fireplexitySearch(
       return `[${index + 1}] ${source.title}\nURL: ${source.url}\n${relevant}`;
     })
     .join("\n\n---\n\n")
-    .slice(0, 8000);
+    .slice(0, 12000);
 
-  // Step 3: Synthesis — use Groq if available, fall back to Claude
-  let synthesis = "";
-  let structured: Record<string, unknown> = {};
+  // Step 3: Synthesis — Claude Haiku (fast + reliable structured extraction)
+  const Anthropic = (await import("@anthropic-ai/sdk")).default;
+  const anthropic = new Anthropic();
 
-  if (groqKey) {
-    // Groq path — fast inference
-    const groq = createGroq({ apiKey: groqKey });
-
-    const result = await generateText({
-      model: groq("llama-3.3-70b-versatile"),
-      system: `You are a nonpartisan civic research analyst for Wisconsin 2026 elections.
+  const synthesisPrompt = `You are a nonpartisan civic research analyst for Wisconsin 2026 elections.
 
 Given search results about a candidate, return a JSON object with these fields:
 {
@@ -167,27 +191,28 @@ Given search results about a candidate, return a JSON object with these fields:
   "summary": { "officialSources": number, "newsSources": number, "factCheckSources": number, "keyFinding": string }
 }
 
-Rules: Only include data found in the search results. Extract dollar amounts aggressively. Use sourceUrls from the results. Return ONLY valid JSON.`,
-      prompt: `Research: ${candidateName} (type: ${candidateType})\n\nSources:\n${context}`,
-      temperature: 0,
-      // @ts-expect-error -- AI SDK version compatibility
-      maxTokens: 2000,
-    });
+CRITICAL RULES:
+- Extract EVERY dollar amount, donor name, PAC, and financial figure you find.
+- For votes, use: "Yea", "Nay", "Not Voting", "Sponsored", "Co-sponsored".
+- Include 2-3+ items per category when data exists.
+- ALWAYS include sourceUrl from the search results.
+- Context fields should explain WHY a finding matters.
+- Return ONLY valid JSON. No markdown, no explanation.`;
 
-    synthesis = result.text;
-  } else {
-    // Claude fallback
-    const Anthropic = (await import("@anthropic-ai/sdk")).default;
-    const anthropic = new Anthropic();
+  let synthesis = "";
+  let structured: Record<string, unknown> = {};
 
-    const result = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      system: `You are a nonpartisan civic research analyst. Return ONLY valid JSON with candidate data including votes, donors, factChecks, endorsements, platform, news, and summary.`,
-      messages: [{ role: "user", content: `Research: ${candidateName} (type: ${candidateType})\n\nSources:\n${context}` }],
-    });
+  const result = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 8000,
+    system: synthesisPrompt,
+    messages: [{ role: "user", content: `Research: ${candidateName} (type: ${candidateType})\n\nSources:\n${context}` }],
+  });
 
-    synthesis = result.content[0].type === "text" ? result.content[0].text : "{}";
+  synthesis = result.content[0].type === "text" ? result.content[0].text : "{}";
+  console.log(`[fireplexity] Synthesis: ${synthesis.length} chars, stop: ${result.stop_reason}, content_types: ${result.content.map((c: { type: string }) => c.type).join(",")}`);
+  if (synthesis.length === 0) {
+    console.error("[fireplexity] EMPTY synthesis! Result:", JSON.stringify(result).slice(0, 500));
   }
 
   // Parse JSON from synthesis
