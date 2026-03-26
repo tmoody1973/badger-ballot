@@ -69,6 +69,21 @@
             "type": "client",
             "config": "tool_configs/show_vote-2.json",
             "id": "tool_2601km5tbz7jebat5z2cc9dr5vae"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/lookup_polling_place.json",
+            "id": "tool_1774532299817"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/lookup_ballot.json",
+            "id": "tool_1774532299876"
+        },
+        {
+            "type": "client",
+            "config": "tool_configs/lookup_registration.json",
+            "id": "tool_1774532299941"
         }
     ]
 }

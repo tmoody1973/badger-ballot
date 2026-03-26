@@ -1,0 +1,35 @@
+{
+    "type": "client",
+    "name": "lookup_ballot",
+    "description": "Show what races and candidates are on the user's ballot. Use when the user asks 'what's on my ballot', 'show me my ballot', 'what races am I voting in', or 'who is running'. Requires the user's street address. Takes about 60 seconds. Results appear on screen.",
+    "response_timeout_secs": 5,
+    "disable_interruptions": false,
+    "force_pre_tool_speech": false,
+    "assignments": [],
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "parameters": {
+        "type": "object",
+        "required": ["address"],
+        "description": "Look up ballot by address",
+        "properties": {
+            "address": {
+                "type": "string",
+                "description": "Street address, e.g. '1108 W Chambers St'"
+            },
+            "city": {
+                "type": "string",
+                "description": "City name, e.g. 'Milwaukee'"
+            },
+            "zip": {
+                "type": "string",
+                "description": "ZIP code, e.g. '53206'"
+            }
+        }
+    },
+    "expects_response": true,
+    "dynamic_variables": {
+        "dynamicVariablePlaceholders": {}
+    },
+    "execution_mode": "immediate"
+}

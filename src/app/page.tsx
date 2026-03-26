@@ -214,6 +214,7 @@ export default function BallotBadger() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ candidate: candidate.id }),
+        signal: AbortSignal.timeout(55_000),
       });
 
       const data: ReceiptsResponse = await response.json();
@@ -256,6 +257,10 @@ export default function BallotBadger() {
   }, []);
 
   const handleVoiceStatusChange = useCallback((status: string) => {
+    // Don't overwrite search status with voice disconnect/error messages
+    if ((status === "Disconnected." || status === "Voice error. Try again.") && searchInProgressRef.current) {
+      return; // Search is still running — keep the search status visible
+    }
     setStatusText(status);
   }, []);
 

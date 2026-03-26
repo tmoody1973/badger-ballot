@@ -3,28 +3,42 @@ import { NextResponse } from "next/server";
 const TOOLS_CONFIG = {
   "polling-place": {
     url: "https://myvote.wi.gov/en-US/FindMyPollingPlace",
-    fillPrompt: (address: string, city: string, zip: string) =>
-      `Fill the Street Address field with "${address}". Fill the City field with "${city}". Fill the Zip field with "${zip}". Click the Search button. Wait for the page to fully update with results before confirming.`,
-    readPrompt: () =>
-      `Read the polling place results now visible on the page. Tell me:
+    // Playwright getByLabel — stable across page loads (no dynamic refs)
+    code: (address: string, city: string, zip: string) =>
+      `await page.getByLabel('Street Address*').fill('${address.replace(/'/g, "\\'")}');
+await page.getByLabel('City*').fill('${city.replace(/'/g, "\\'")}');
+await page.getByLabel('Zip*').fill('${zip}');
+await page.getByRole('button', { name: 'Search' }).click();
+await page.waitForTimeout(5000);`,
+    codeLang: "node" as const,
+    readPrompt: `Read the polling place results now visible on the page. Return ONLY:
 Name: [polling place name]
 Address: [full address]
 Hours: [voting hours]
 Ward: [ward number]
-Election: [election date if shown]
-Return ONLY these fields as plain text.`,
+Election: [election date]`,
   },
   "ballot": {
     url: "https://myvote.wi.gov/en-US/PreviewMyBallot",
-    fillPrompt: (address: string, city: string, zip: string) =>
-      `Fill the Street Address field with "${address}". Fill the City field with "${city}". Fill the Zip field with "${zip}". Click the Search button. Wait for the sample ballot to fully load — you should see "SAMPLE BALLOT FOR MY NEXT ELECTION" and a list of races. Then list every race showing the office name and ALL candidate names. Format as a numbered list.`,
-    readPrompt: null as (() => string) | null, // single step — ballot needs full timeout
+    code: (address: string, city: string, zip: string) =>
+      `await page.getByLabel('Street Address*').fill('${address.replace(/'/g, "\\'")}');
+await page.getByLabel('City*').fill('${city.replace(/'/g, "\\'")}');
+await page.getByLabel('Zip*').fill('${zip}');
+await page.getByRole('button', { name: 'Search' }).click();
+await page.waitForTimeout(10000);`,
+    codeLang: "node" as const,
+    readPrompt: `Read the sample ballot now visible. List every race and all candidates as a numbered list:
+1. [Office]: [Candidate A], [Candidate B]
+Return ONLY the list as plain text.`,
   },
   "registration": {
     url: "https://myvote.wi.gov/en-US/RegisterToVote",
-    fillPrompt: (address: string, city: string, zip: string) =>
-      `Tell me how to register to vote at ${address}, ${city}, WI ${zip}.`,
-    readPrompt: null as (() => string) | null,
+    code: null as ((a: string, c: string, z: string) => string) | null,
+    codeLang: "node" as const,
+    readPrompt: null as string | null,
+    // Registration uses a single prompt — no form to fill
+    singlePrompt: (address: string, city: string, zip: string) =>
+      `Tell me how to register to vote at ${address}, ${city}, WI ${zip}. Include online, by mail, and in-person options with deadlines.`,
   },
 };
 
@@ -35,27 +49,6 @@ function fcHeaders(key: string) {
 }
 
 export const maxDuration = 120;
-
-async function interact(
-  scrapeId: string,
-  key: string,
-  prompt: string,
-  timeoutS: number,
-  signalMs: number,
-): Promise<{ ok: boolean; content: string; error?: string }> {
-  const res = await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, {
-    method: "POST",
-    headers: fcHeaders(key),
-    body: JSON.stringify({ prompt, timeout: timeoutS }),
-    signal: AbortSignal.timeout(signalMs),
-  });
-  if (!res.ok) {
-    const err = await res.text().catch(() => "");
-    return { ok: false, content: "", error: `${res.status}: ${err.slice(0, 200)}` };
-  }
-  const result = await res.json();
-  return { ok: true, content: result?.output || result?.stdout || "" };
-}
 
 export async function POST(req: Request) {
   try {
@@ -95,35 +88,72 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "No browser session", rawContent: "" }, { status: 502 });
     }
 
-    console.log(`[voter-info] ScrapeId: ${scrapeId}, filling form...`);
+    console.log(`[voter-info] ScrapeId: ${scrapeId}`);
 
-    // Step 2: Fill form + click search (ballot needs longer — single step does fill+wait+read)
-    const fillTimeout = tool === "ballot" ? 80 : 45;
-    const fillSignal = tool === "ballot" ? 90000 : 55000;
-    const fillResult = await interact(scrapeId, firecrawlKey, config.fillPrompt(address, resolvedCity, resolvedZip), fillTimeout, fillSignal);
+    let rawContent = "";
 
-    if (!fillResult.ok) {
-      console.error(`[voter-info] Fill failed: ${fillResult.error}`);
-      await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, { method: "DELETE", headers: { Authorization: `Bearer ${firecrawlKey}` } }).catch(() => {});
-      return NextResponse.json({ success: false, error: "Could not fill form", rawContent: "" }, { status: 502 });
-    }
+    if (config.code) {
+      // Step 2a: CODE mode — fill form + click search (deterministic Playwright)
+      console.log(`[voter-info] Running code: fill + click...`);
+      const codeRes = await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, {
+        method: "POST",
+        headers: fcHeaders(firecrawlKey),
+        body: JSON.stringify({
+          code: config.code(address, resolvedCity, resolvedZip),
+          language: config.codeLang ?? "node",
+          timeout: tool === "ballot" ? 60 : 30,
+        }),
+        signal: AbortSignal.timeout(tool === "ballot" ? 70000 : 40000),
+      });
 
-    console.log(`[voter-info] Form filled (${fillResult.content.length} chars). Reading results...`);
-
-    // Step 3: Read results (skip for registration)
-    let rawContent = fillResult.content;
-    if (config.readPrompt) {
-      const readResult = await interact(scrapeId, firecrawlKey, config.readPrompt(), 45, 55000);
-      if (readResult.ok && readResult.content.length > 0) {
-        rawContent = readResult.content;
+      if (!codeRes.ok) {
+        const err = await codeRes.text().catch(() => "");
+        console.error(`[voter-info] Code step failed: ${codeRes.status} ${err.slice(0, 200)}`);
+        await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, { method: "DELETE", headers: { Authorization: `Bearer ${firecrawlKey}` } }).catch(() => {});
+        return NextResponse.json({ success: false, error: "Could not fill form", rawContent: "" }, { status: 502 });
       }
-      console.log(`[voter-info] Read: ${readResult.content.length} chars, ok: ${readResult.ok}`);
+
+      const codeResult = await codeRes.json();
+      console.log(`[voter-info] Code done. exitCode: ${codeResult?.exitCode}, stdout: ${(codeResult?.stdout ?? "").length} chars`);
+
+      // Step 2b: PROMPT mode — read results (AI interprets the loaded page)
+      if (config.readPrompt) {
+        console.log(`[voter-info] Reading results with prompt...`);
+        const readTimeout = tool === "ballot" ? 60 : 50;
+        const readRes = await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, {
+          method: "POST",
+          headers: fcHeaders(firecrawlKey),
+          body: JSON.stringify({ prompt: config.readPrompt, timeout: readTimeout }),
+          signal: AbortSignal.timeout((readTimeout + 10) * 1000),
+        });
+
+        if (readRes.ok) {
+          const readResult = await readRes.json();
+          rawContent = readResult?.output || readResult?.stdout || "";
+          console.log(`[voter-info] Read done: ${rawContent.length} chars`);
+        } else {
+          console.error(`[voter-info] Read failed: ${readRes.status}`);
+        }
+      }
+    } else if ("singlePrompt" in config && config.singlePrompt) {
+      // Registration — single prompt, no form
+      const promptRes = await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, {
+        method: "POST",
+        headers: fcHeaders(firecrawlKey),
+        body: JSON.stringify({ prompt: config.singlePrompt(address, resolvedCity, resolvedZip), timeout: 45 }),
+        signal: AbortSignal.timeout(55000),
+      });
+
+      if (promptRes.ok) {
+        const result = await promptRes.json();
+        rawContent = result?.output || result?.stdout || "";
+      }
     }
 
-    // Step 4: Cleanup
+    // Cleanup
     await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, { method: "DELETE", headers: { Authorization: `Bearer ${firecrawlKey}` } }).catch(() => {});
 
-    console.log(`[voter-info] Done. Output: ${String(rawContent).length} chars`);
+    console.log(`[voter-info] Done. Output: ${rawContent.length} chars`);
 
     return NextResponse.json({
       success: true,

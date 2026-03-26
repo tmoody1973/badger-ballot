@@ -42,6 +42,42 @@ export function useVoiceAgent({
     }
   }, [onCandidateResearch, onSelectCandidate]);
 
+  // Shared voter lookup — fires fetch and renders component when done
+  const voterLookup = useCallback((address: string, city: string, zip: string, action: string, componentType: string) => {
+    fetch("/api/voter-info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address, city, zip, action }),
+      signal: AbortSignal.timeout(110_000),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (!data.success) {
+          onStatusChange(`Voter lookup failed: ${data.error ?? "unknown error"}. Try myvote.wi.gov directly.`);
+          return;
+        }
+        onComponentAdd({
+          type: componentType as "pollingPlace",
+          data: {
+            address: `${address}, ${city}, WI ${zip}`,
+            rawContent: data.rawContent ?? "",
+            sourceUrl: data.sourceUrl ?? "https://myvote.wi.gov",
+            nextElection: data.nextElection ?? "Tuesday, April 7, 2026",
+            daysUntilElection: data.daysUntilElection ?? 14,
+          },
+        });
+        const label = action === "ballot" ? "ballot" : action === "registration" ? "registration" : "polling place";
+        onStatusChange(`Found your ${label} info.`);
+      })
+      .catch((err) => {
+        console.error(`[voter-lookup] ${action} failed:`, err);
+        onStatusChange("Couldn't look up voter info. Visit myvote.wi.gov directly.");
+      });
+  }, [onComponentAdd, onStatusChange]);
+
   const conversation = useConversation({
     onConnect: () => {
       setIsConnected(true);
@@ -240,67 +276,42 @@ export function useVoiceAgent({
         return "displayed";
       },
 
-      // Voter services — Firecrawl interact() navigates myvote.wi.gov
-      // NON-BLOCKING: returns immediately so voice agent doesn't timeout
-      lookup_voter_info: (params: {
-        address: string;
-        city?: string;
-        zip?: string;
-        action?: string;
-      }) => {
+      // === Voter services — three separate tools so the LLM can't pick the wrong action ===
+      // NON-BLOCKING: each fires request and returns immediately
+
+      // "Where do I vote?"
+      lookup_polling_place: (params: { address: string; city?: string; zip?: string }) => {
+        const city = params.city || "Milwaukee";
+        onStatusChange(`Looking up your polling place for ${params.address}... This takes about 30 seconds.`);
+        voterLookup(params.address, city, params.zip ?? "", "polling-place", "pollingPlace");
+        return `Looking up polling place for ${params.address}, ${city}. Results will appear on screen in about 30 seconds. Tell the user their next election is Tuesday April 7, 2026 and remind them to bring a photo ID.`;
+      },
+
+      // "What's on my ballot?"
+      lookup_ballot: (params: { address: string; city?: string; zip?: string }) => {
+        const city = params.city || "Milwaukee";
+        onStatusChange(`Checking what's on your ballot for ${params.address}... This takes about 60 seconds.`);
+        voterLookup(params.address, city, params.zip ?? "", "ballot", "ballotPreview");
+        return `Checking ballot for ${params.address}, ${city}. The ballot takes about 60 seconds to load. Tell the user their next election is Tuesday April 7, 2026 — Spring Election with Supreme Court, circuit court judges, and county supervisor races. Remind them to bring a photo ID.`;
+      },
+
+      // "Am I registered?"
+      lookup_registration: (params: { address: string; city?: string; zip?: string }) => {
+        const city = params.city || "Milwaukee";
+        onStatusChange(`Checking voter registration for ${params.address}...`);
+        voterLookup(params.address, city, params.zip ?? "", "registration", "registration");
+        return `Checking registration for ${params.address}, ${city}. Results will appear on screen shortly.`;
+      },
+
+      // Keep old tool name as alias so existing agent config still works
+      lookup_voter_info: (params: { address: string; city?: string; zip?: string; action?: string }) => {
+        const city = params.city || "Milwaukee";
         const action = params.action ?? "polling-place";
-        const resolvedCity = params.city || "Milwaukee";
-        const labels: Record<string, string> = {
-          "polling-place": "Looking up your polling place",
-          "ballot": "Checking what's on your ballot",
-          "registration": "Checking your voter registration",
-        };
-        onStatusChange(`${labels[action] ?? "Looking up voter info"} for ${params.address}... This takes about 30 seconds.`);
-
-        // Fire and forget — don't await, return immediately
-        fetch("/api/voter-info", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            address: params.address,
-            city: resolvedCity,
-            zip: params.zip ?? "",
-            action,
-          }),
-          signal: AbortSignal.timeout(110_000),
-        })
-          .then((res) => {
-            if (!res.ok) throw new Error(`Server returned ${res.status}`);
-            return res.json();
-          })
-          .then((data) => {
-            if (!data.success) {
-              onStatusChange(`Voter lookup failed: ${data.error ?? "unknown error"}. Try myvote.wi.gov directly.`);
-              return;
-            }
-            const componentType = action === "ballot" ? "ballotPreview"
-              : action === "registration" ? "registration"
-              : "pollingPlace";
-
-            onComponentAdd({
-              type: componentType as "pollingPlace",
-              data: {
-                address: `${params.address}, ${resolvedCity}, WI ${params.zip ?? ""}`,
-                rawContent: data.rawContent ?? "",
-                sourceUrl: data.sourceUrl ?? "https://myvote.wi.gov",
-                nextElection: data.nextElection ?? "Tuesday, April 7, 2026",
-                daysUntilElection: data.daysUntilElection ?? 14,
-              },
-            });
-            onStatusChange(`Found your ${action === "ballot" ? "ballot" : action === "registration" ? "registration" : "polling place"} info.`);
-          })
-          .catch((err) => {
-            console.error("[lookup_voter_info] Failed:", err);
-            onStatusChange("Couldn't look up voter info. Visit myvote.wi.gov directly.");
-          });
-
-        // Return immediately so voice agent continues talking
-        return `Looking up voter info for ${params.address}, ${resolvedCity}. The results will appear on screen in about 30 seconds. In the meantime, tell the user their next election is Tuesday April 7, 2026 and remind them to bring a photo ID.`;
+        const componentType = action === "ballot" ? "ballotPreview" : action === "registration" ? "registration" : "pollingPlace";
+        const label = action === "ballot" ? "ballot" : action === "registration" ? "registration" : "polling place";
+        onStatusChange(`Looking up your ${label} for ${params.address}...`);
+        voterLookup(params.address, city, params.zip ?? "", action, componentType);
+        return `Looking up ${label} for ${params.address}, ${city}. Results will appear on screen in about 30 seconds. Tell the user their next election is Tuesday April 7, 2026 and remind them to bring a photo ID.`;
       },
 
       // Deep dive — "go deeper on donors", "tell me more about their votes"
