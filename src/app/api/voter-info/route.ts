@@ -1,46 +1,76 @@
 import { NextResponse } from "next/server";
 
+// Three-step architecture: Scrape → Code (Playwright) → Claude parse
+// Based on ASP.NET WebForms quirks of myvote.wi.gov:
+// - pressSequentially() to fire keyboard events (not fill())
+// - .blur() after each field to trigger ASP.NET validation
+// - force: true on click to bypass invisible span wrappers
+// - waitForLoadState('networkidle') for postback results
+// - Extract document.body.innerText in code, parse with Claude separately
+
 const TOOLS_CONFIG = {
   "polling-place": {
     url: "https://myvote.wi.gov/en-US/FindMyPollingPlace",
-    // Playwright getByLabel — stable across page loads (no dynamic refs)
-    code: (address: string, city: string, zip: string) =>
-      `await page.getByLabel('Street Address*').fill('${address.replace(/'/g, "\\'")}');
-await page.getByLabel('City*').fill('${city.replace(/'/g, "\\'")}');
-await page.getByLabel('Zip*').fill('${zip}');
-await page.getByRole('button', { name: 'Search' }).click();
-await page.waitForTimeout(5000);`,
-    codeLang: "node" as const,
-    readPrompt: `Read the polling place results now visible on the page. Return ONLY:
-Name: [polling place name]
-Address: [full address]
-Hours: [voting hours]
-Ward: [ward number]
-Election: [election date]`,
+    claudePrompt: `Extract the polling place information from this text. Return ONLY valid JSON:
+{"name": "...", "address": "...", "hours": "...", "ward": "...", "election": "..."}
+If no polling place was found, return {"error": "No results found"}`,
   },
   "ballot": {
     url: "https://myvote.wi.gov/en-US/PreviewMyBallot",
-    code: (address: string, city: string, zip: string) =>
-      `await page.getByLabel('Street Address*').fill('${address.replace(/'/g, "\\'")}');
-await page.getByLabel('City*').fill('${city.replace(/'/g, "\\'")}');
-await page.getByLabel('Zip*').fill('${zip}');
-await page.getByRole('button', { name: 'Search' }).click();
-await page.waitForTimeout(10000);`,
-    codeLang: "node" as const,
-    readPrompt: `Read the sample ballot now visible. List every race and all candidates as a numbered list:
-1. [Office]: [Candidate A], [Candidate B]
-Return ONLY the list as plain text.`,
+    claudePrompt: `Extract every race and candidate from this ballot text. Return ONLY valid JSON:
+{"races": [{"office": "...", "candidates": ["...", "..."]}]}
+Include EVERY race. If no ballot was found, return {"error": "No results found"}`,
   },
   "registration": {
     url: "https://myvote.wi.gov/en-US/RegisterToVote",
-    code: null as ((a: string, c: string, z: string) => string) | null,
-    codeLang: "node" as const,
-    readPrompt: null as string | null,
-    // Registration uses a single prompt — no form to fill
-    singlePrompt: (address: string, city: string, zip: string) =>
-      `Tell me how to register to vote at ${address}, ${city}, WI ${zip}. Include online, by mail, and in-person options with deadlines.`,
+    claudePrompt: null,
   },
 };
+
+function buildPlaywrightCode(address: string, city: string, zip: string, waitMs: number): string {
+  // Escape single quotes in address/city for the JS string
+  const safeAddr = address.replace(/'/g, "\\'");
+  const safeCity = city.replace(/'/g, "\\'");
+
+  return `
+    // Wait for form to render
+    const addrInput = page.getByLabel('Street Address*');
+    await addrInput.waitFor({ state: 'visible', timeout: 15000 });
+
+    // Clear and type with pressSequentially — fires ASP.NET keyboard events
+    await addrInput.click();
+    await addrInput.fill('');
+    await addrInput.pressSequentially('${safeAddr}', { delay: 30 });
+    await addrInput.evaluate(el => el.dispatchEvent(new Event('blur')));
+
+    const cityInput = page.getByLabel('City*');
+    await cityInput.click();
+    await cityInput.fill('');
+    await cityInput.pressSequentially('${safeCity}', { delay: 30 });
+    await cityInput.evaluate(el => el.dispatchEvent(new Event('blur')));
+
+    const zipInput = page.getByLabel('Zip*');
+    await zipInput.click();
+    await zipInput.fill('');
+    await zipInput.pressSequentially('${zip}', { delay: 30 });
+    await zipInput.evaluate(el => el.dispatchEvent(new Event('blur')));
+
+    // Wait for ASP.NET validation to enable the button
+    await page.waitForTimeout(1500);
+
+    // Click Search with force:true — bypasses invisible ASP.NET span wrappers
+    const searchBtn = page.getByRole('button', { name: 'Search' });
+    await searchBtn.click({ force: true });
+
+    // Wait for postback results to fully load
+    await page.waitForLoadState('networkidle', { timeout: ${waitMs} });
+    await page.waitForTimeout(2000);
+
+    // Extract raw page text — deterministic, no AI interpretation
+    const content = await page.evaluate(() => document.body.innerText);
+    JSON.stringify({ content });
+  `;
+}
 
 const FC_BASE = "https://api.firecrawl.dev/v2";
 
@@ -68,14 +98,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "FIRECRAWL_API_KEY not set" }, { status: 500 });
     }
 
-    console.log(`[voter-info] Tool: ${tool}, scraping ${config.url}...`);
+    console.log(`[voter-info] Tool: ${tool}, loading ${config.url}...`);
 
-    // Step 1: Scrape to get browser session
+    // === Step 1: Scrape — load page + bypass Cloudflare ===
     const scrapeRes = await fetch(`${FC_BASE}/scrape`, {
       method: "POST",
       headers: fcHeaders(firecrawlKey),
-      body: JSON.stringify({ url: config.url, formats: ["markdown"], timeout: 30000 }),
-      signal: AbortSignal.timeout(35000),
+      body: JSON.stringify({ url: config.url, formats: ["markdown"], timeout: 45000 }),
+      signal: AbortSignal.timeout(50000),
     });
 
     if (!scrapeRes.ok) {
@@ -88,69 +118,134 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "No browser session", rawContent: "" }, { status: 502 });
     }
 
-    console.log(`[voter-info] ScrapeId: ${scrapeId}`);
+    console.log(`[voter-info] Session: ${scrapeId}`);
 
     let rawContent = "";
 
-    if (config.code) {
-      // Step 2a: CODE mode — fill form + click search (deterministic Playwright)
-      console.log(`[voter-info] Running code: fill + click...`);
-      const codeRes = await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, {
+    if (tool === "registration") {
+      // Registration — no form, just a prompt
+      const promptRes = await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, {
         method: "POST",
         headers: fcHeaders(firecrawlKey),
         body: JSON.stringify({
-          code: config.code(address, resolvedCity, resolvedZip),
-          language: config.codeLang ?? "node",
-          timeout: tool === "ballot" ? 60 : 30,
+          prompt: `Tell me how to register to vote at ${address}, ${resolvedCity}, WI ${resolvedZip}. Include online, by mail, and in-person options.`,
+          timeout: 45,
         }),
-        signal: AbortSignal.timeout(tool === "ballot" ? 70000 : 40000),
+        signal: AbortSignal.timeout(55000),
+      });
+      if (promptRes.ok) {
+        const result = await promptRes.json();
+        rawContent = result?.output || result?.stdout || "";
+      }
+    } else {
+      // === Step 2: Code — deterministic Playwright fills form + extracts text ===
+      const waitMs = tool === "ballot" ? 45000 : 30000;
+      const codeTimeout = tool === "ballot" ? 90 : 60;
+      const code = buildPlaywrightCode(address, resolvedCity, resolvedZip, waitMs);
+
+      console.log(`[voter-info] Executing Playwright code (timeout: ${codeTimeout}s)...`);
+
+      const codeRes = await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, {
+        method: "POST",
+        headers: fcHeaders(firecrawlKey),
+        body: JSON.stringify({ code, language: "node", timeout: codeTimeout }),
+        signal: AbortSignal.timeout((codeTimeout + 15) * 1000),
       });
 
       if (!codeRes.ok) {
         const err = await codeRes.text().catch(() => "");
-        console.error(`[voter-info] Code step failed: ${codeRes.status} ${err.slice(0, 200)}`);
+        console.error(`[voter-info] Code failed: ${codeRes.status} ${err.slice(0, 200)}`);
         await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, { method: "DELETE", headers: { Authorization: `Bearer ${firecrawlKey}` } }).catch(() => {});
         return NextResponse.json({ success: false, error: "Could not fill form", rawContent: "" }, { status: 502 });
       }
 
       const codeResult = await codeRes.json();
-      console.log(`[voter-info] Code done. exitCode: ${codeResult?.exitCode}, stdout: ${(codeResult?.stdout ?? "").length} chars`);
+      console.log(`[voter-info] Code done. exit: ${codeResult?.exitCode}, stdout: ${(codeResult?.stdout ?? "").length}c, result: ${(codeResult?.result ?? "").length}c`);
 
-      // Step 2b: PROMPT mode — read results (AI interprets the loaded page)
-      if (config.readPrompt) {
-        console.log(`[voter-info] Reading results with prompt...`);
-        const readTimeout = tool === "ballot" ? 60 : 50;
-        const readRes = await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, {
-          method: "POST",
-          headers: fcHeaders(firecrawlKey),
-          body: JSON.stringify({ prompt: config.readPrompt, timeout: readTimeout }),
-          signal: AbortSignal.timeout((readTimeout + 10) * 1000),
-        });
-
-        if (readRes.ok) {
-          const readResult = await readRes.json();
-          rawContent = readResult?.output || readResult?.stdout || "";
-          console.log(`[voter-info] Read done: ${rawContent.length} chars`);
-        } else {
-          console.error(`[voter-info] Read failed: ${readRes.status}`);
-        }
+      // Extract the page text from the code result
+      let pageText = "";
+      try {
+        // The code returns JSON.stringify({ content }) as the last expression
+        const parsed = JSON.parse(codeResult?.result || "{}");
+        pageText = parsed.content || "";
+      } catch {
+        // Fall back to stdout
+        pageText = codeResult?.stdout || "";
       }
-    } else if ("singlePrompt" in config && config.singlePrompt) {
-      // Registration — single prompt, no form
-      const promptRes = await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, {
-        method: "POST",
-        headers: fcHeaders(firecrawlKey),
-        body: JSON.stringify({ prompt: config.singlePrompt(address, resolvedCity, resolvedZip), timeout: 45 }),
-        signal: AbortSignal.timeout(55000),
-      });
 
-      if (promptRes.ok) {
-        const result = await promptRes.json();
-        rawContent = result?.output || result?.stdout || "";
+      if (!pageText && codeResult?.result) {
+        pageText = codeResult.result;
+      }
+
+      console.log(`[voter-info] Page text: ${pageText.length} chars`);
+
+      // === Step 3: Claude parses raw text into structured data ===
+      if (pageText && config.claudePrompt) {
+        try {
+          const Anthropic = (await import("@anthropic-ai/sdk")).default;
+          const anthropic = new Anthropic();
+
+          const claudeRes = await anthropic.messages.create({
+            model: "claude-sonnet-4-6",
+            max_tokens: 2000,
+            system: config.claudePrompt,
+            messages: [{ role: "user", content: `Extract data from this page text:\n\n${pageText.slice(0, 8000)}` }],
+          });
+
+          const claudeText = claudeRes.content[0].type === "text" ? claudeRes.content[0].text : "";
+          console.log(`[voter-info] Claude parsed: ${claudeText.length} chars: ${claudeText.slice(0, 200)}`);
+
+          // Extract JSON from Claude response (may be wrapped in ```json ... ```)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let parsedJson: any = {};
+          try {
+            const jsonMatch = claudeText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+            if (jsonMatch) {
+              parsedJson = JSON.parse(jsonMatch[1].trim());
+            } else {
+              parsedJson = JSON.parse(claudeText.trim());
+            }
+          } catch {
+            console.error("[voter-info] Failed to parse Claude JSON:", claudeText.slice(0, 100));
+          }
+
+          // For polling place, format as labeled text for the card parser
+          if (tool === "polling-place") {
+            try {
+              const data = parsedJson;
+              if (data.name) {
+                rawContent = `Name: ${data.name}\nAddress: ${data.address}\nHours: ${data.hours}\nWard: ${data.ward}\nElection: ${data.election}`;
+              } else {
+                rawContent = pageText.slice(0, 4000);
+              }
+            } catch {
+              rawContent = pageText.slice(0, 4000);
+            }
+          } else if (tool === "ballot") {
+            try {
+              const data = parsedJson;
+              if (data.races?.length) {
+                rawContent = data.races
+                  .map((r: { office: string; candidates: string[] }, i: number) =>
+                    `${i + 1}. ${r.office}: ${r.candidates.join(", ")}`)
+                  .join("\n");
+              } else {
+                rawContent = pageText.slice(0, 4000);
+              }
+            } catch {
+              rawContent = pageText.slice(0, 4000);
+            }
+          }
+        } catch (claudeErr) {
+          console.error("[voter-info] Claude parse failed:", claudeErr);
+          rawContent = pageText.slice(0, 4000);
+        }
+      } else {
+        rawContent = pageText.slice(0, 4000);
       }
     }
 
-    // Cleanup
+    // Cleanup session
     await fetch(`${FC_BASE}/scrape/${scrapeId}/interact`, { method: "DELETE", headers: { Authorization: `Bearer ${firecrawlKey}` } }).catch(() => {});
 
     console.log(`[voter-info] Done. Output: ${rawContent.length} chars`);
