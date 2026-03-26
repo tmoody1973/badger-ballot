@@ -1,160 +1,151 @@
-# Ballot Badger — Demo Video Script
+# Ballot Badger — Demo video script
 
-**Total length:** 75-90 seconds
-**Style:** Screen recording + real-world shots + ElevenLabs voiceover
-**Tone:** Confident, direct, civic-minded. Not salesy.
-
----
-
-## SHOT 1: The ballot reveal (0-8 seconds)
-**Type:** Screen recording
-**What's on screen:** BallotPreviewCard fully loaded with all 9 races for 1108 W Chambers St, Milwaukee, 53206. Election countdown showing "14 days."
-
-**Voiceover:**
-> "This is my actual ballot for April 7th. Nine races. An AI just pulled it from the Wisconsin election site — in real time."
-
-**Why this works:** Immediately personal, real data, real government source. Judges think "wait, it actually did that?"
+**Length:** 75-90 seconds
+**Style:** You on camera + screen recording + voiceover
+**Tone:** Stewart energy. Incredulous at the absurdity, specific with the facts, dead serious for two seconds when it counts.
 
 ---
 
-## SHOT 2: The problem (8-15 seconds)
-**Type:** Real-world shot — you at your laptop, maybe at a kitchen table or desk. Quick, casual.
+## SHOT 1: The hook (0-12 seconds)
+You at your desk. Casual. Direct to camera. Slight head shake.
 
-**You on camera (or voiceover over the real-world shot):**
-> "Wisconsin has 28 races this year. Open governor's seat. Supreme Court. Three constitutional amendments. Nobody has time to research all of it."
+> "Wisconsin votes in 12 days. April 7th. Nine races on my ballot. I couldn't name a candidate in six of them. And I'm the guy who BUILT the app. So imagine everyone else."
 
-**Cut to:** Brief flash of myvote.wi.gov, Ballotpedia, OpenSecrets tabs open — the overwhelm.
-
----
-
-## SHOT 3: Introduce Ballot Badger (15-20 seconds)
-**Type:** Screen recording — the app landing page with the Ballot Badger logo, candidate directory, neobrutalism UI.
-
-**Voiceover:**
-> "So I built Ballot Badger. You talk to it. It searches the web, pulls the receipts, and shows you what it found."
+*Delivery: Conversational, not performative. The joke is real — you literally couldn't name the judges. Lean into that.*
 
 ---
 
-## SHOT 4: The voice research — the money shot (20-45 seconds)
-**Type:** Screen recording of LIVE voice interaction
+## SHOT 2: The problem (12-22 seconds)
+Remotion montage (see `docs/montage-assets.md` for the full prompt and links). Headlines stacking, the 38% stat punching in, contradictory amendment framing side by side, deepfake headline, ending on "How is anyone supposed to figure this out?"
 
-**Setup:** App is open. You click "Talk to Ballot Badger."
+> "Here's what Wisconsin looks like right now. Eleven people running for governor. A Supreme Court seat that flips the entire court for a decade. Marquette just polled it — 38% of voters have heard nothing about the race. Nothing. It's in 12 days. Three constitutional amendments — one side calls it the 'Equality Amendment,' the other side calls it 'banning DEI.' Same amendment. And then you go online and it's just... AI deepfakes, PAC ads, and a TikTok that says the election is in June. It's not in June."
 
-**You speaking (recorded live):**
+*Delivery: "38% have heard nothing" gets the emphasis — slow down, let it land. Speed back up for the amendment contradiction. Deadpan on "It's not in June."*
+
+---
+
+## SHOT 3: The turn (22-27 seconds)
+Screen recording. App loads — logo, candidate directory.
+
+> "So I did what any reasonable person would do. I spent six days building an AI that does the homework for you."
+
+*Delivery: Dry. The comedy is in "any reasonable person." Quick beat, then the app is on screen.*
+
+---
+
+## SHOT 4: The voice research (27-48 seconds)
+Screen recording, LIVE voice interaction.
+
+You click the voice button.
+
 > "Tell me about Tom Tiffany."
 
-**What happens on screen:**
-1. Voice connects — listening indicator appears
-2. Agent says "Let me dig into that..." (we hear the ElevenLabs voice)
-3. Digging progress animation: "Searching public records... Following the money trail..."
-4. Quick context card appears: "Wisconsin's first open governor's race since 2010"
-5. CandidateCard for Tiffany appears with photo
-6. Race comparison carousel scrolls into view — all governor candidates side by side
-7. VoteRecord cards appear: "Nay on Great American Outdoors Act"
-8. DonorTable: Uihlein donations
-9. FactCheckBadge: "Criticizes billionaire loophole but voted for law that created it"
-10. Status: "Found 42 sources"
+On screen:
+1. Listening indicator
+2. Agent voice: "Let me dig into Tom Tiffany..." (audible 3-5 seconds)
+3. Digging progress animation
+4. Context card about the governor's race
+5. CandidateCard with photo
+6. Race comparison carousel — eleven governor candidates side by side
+7. VoteRecord cards
+8. DonorTable
+9. FactCheckBadge: "Criticizes billionaire loophole but voted for the law that created it"
+10. Status: "Found 44 sources"
 
-**Voiceover (over the visual montage, not the agent's voice — let the agent's voice play for a few seconds, then fade it under the voiceover):**
-> "Firecrawl searches 40+ sources across Congress.gov, OpenSecrets, PolitiFact, and Wisconsin news. Groq synthesizes the findings. The ElevenLabs voice agent narrates while the UI builds in real time."
+Your voiceover fades in over the agent:
 
-**Key:** Let the ElevenLabs agent voice be audible for 3-5 seconds so judges hear it's real. Then voiceover takes over.
+> "So that just searched 44 sources. Congress.gov for his votes. OpenSecrets for his money. PolitiFact for the stuff he says versus the stuff he does. And look — it found that he complained about a billionaire tax loophole that he literally voted to create. You can't make this up. Every finding links to its source. Check it yourself."
+
+*Delivery: "You can't make this up" is the Stewart move — genuine disbelief at a real contradiction. Not angry, just... incredulous.*
 
 ---
 
-## SHOT 5: The voter lookup — jaw-drop #2 (45-60 seconds)
-**Type:** Screen recording
+## SHOT 5: The voter lookup (48-63 seconds)
+Screen recording.
 
-**You speaking to the agent (or typing in the app):**
+You, to the agent:
 > "Where do I vote?"
 
-**Agent responds:** "What's your address?"
+Agent: "What's your address?"
 
-**You:** "1108 W Chambers St, Milwaukee, 53206."
+You: "1108 W Chambers St, Milwaukee, 53206."
 
-**What happens on screen:**
-1. Status: "Looking up your polling place..."
-2. PollingPlaceCard appears:
-   - Lafollette, Robert M. Elementary School
-   - 3239 N 9th St, Milwaukee, WI 53206
-   - Tuesday, April 7, 2026 — 7:00 AM - 8:00 PM
-   - Ward 113
-   - Election countdown: 14 days
-   - "Verify on MyVote" button
+On screen:
+- "Looking up your polling place..."
+- PollingPlaceCard appears: Lafollette Elementary, 3239 N 9th St, 7 AM - 8 PM, Ward 113
 
-**Voiceover:**
-> "It just navigated myvote.wi.gov — the official state election site — filled in my address, and pulled my actual polling place. That's Firecrawl's Browser Sandbox filling a government form in real time."
+Your voiceover:
+
+> "OK so this is the part that blew my mind when I built it. It just opened a browser. Went to the actual state election website. Typed my address into the form. Clicked search. Read the results back to me. That's not a database lookup. That's a robot filling out a government website in real time. Lafollette Elementary. Ward 113. April 7th."
+
+*Delivery: Genuine excitement. You're still impressed by your own thing. That's honest and it reads.*
 
 ---
 
-## SHOT 6: The comparison (60-68 seconds)
-**Type:** Screen recording — the race comparison carousel
+## SHOT 6: The ballot (63-70 seconds)
+Screen recording. BallotPreviewCard loads with 9 races.
 
-**What's on screen:** Scrolling through governor candidates — Barnes, Rodriguez, Roys, Hong, Crowley, Tiffany — each with photos, party badges, key facts, severity dots.
+> "Same thing for my ballot. Nine races. Every candidate. Pulled live off myvote.wi.gov. Including four circuit court judges I'd never heard of in my life."
 
-**Voiceover:**
-> "Every race. Every candidate. Side by side. Click any card to pull their receipts."
-
----
-
-## SHOT 7: The close — real world (68-80 seconds)
-**Type:** Real-world shot — you holding your phone or at your laptop, direct to camera.
-
-**You on camera:**
-> "Wisconsin votes April 7th. Ballot Badger covers 28 races, cites every source, and tells you where to vote. Built in 6 days with ElevenLabs, Firecrawl, and Groq for the ElevenHacks hackathon."
+*Delivery: The judges line is the self-deprecating beat. You're a voter admitting what all voters feel.*
 
 ---
 
-## END CARD (80-85 seconds)
-**Type:** Static graphic
+## SHOT 7: The close (70-82 seconds)
+Same setup as shot 1. Direct to camera. Drop the comedy for a second. Real.
 
-**On screen:**
-- Ballot Badger logo (the SVG wordmark)
+> "Look. Wisconsin has a governor's race in November with eleven candidates. A Supreme Court seat on April 7th that decides the balance of the court. Three amendments. Circuit judges. County supervisors. Nobody is going to research all of that."
+
+Beat. Slight lean in.
+
+> "This does. Built in six days. ElevenLabs for the voice. Firecrawl for the web. Every answer cites its source."
+
+Beat.
+
+> "You know what's on your ballot?"
+
+*Delivery: The shift from comedy to serious is what Stewart does best. The last line lands because you earned it with 70 seconds of showing the work.*
+
+---
+
+## END CARD (82-87 seconds)
+
+- Ballot Badger logo
 - `badger-ballot.vercel.app`
-- Tech logos: ElevenLabs · Firecrawl · Groq
+- ElevenLabs + Firecrawl + Groq
 - `@firecrawl @elevenlabs #ElevenHacks`
 
 ---
 
-## Recording tips
+## Recording checklist
 
-### Before you record:
-- [ ] Test the voice agent — make sure it connects and speaks
-- [ ] Pre-search Tiffany once so the data is cached/fast for the recording
-- [ ] Test the voter lookup — confirm it returns Lafollette Elementary
-- [ ] Close all other tabs, hide bookmarks bar, turn off notifications
-- [ ] Dark mode OFF (our app is light mode, looks better on video)
+Before you record:
+- [ ] Run polling place once to warm up Firecrawl
+- [ ] Run Tiffany research to confirm donors/votes/fact checks
+- [ ] Run ballot to confirm 9 races
+- [ ] Close all tabs, hide bookmarks, kill notifications
+- [ ] Light mode on
+- [ ] Address ready
 
-### Audio plan:
-- **Shots 1-3, 5-7:** ElevenLabs generated voiceover (clean, professional)
-- **Shot 4:** Live voice interaction — your real voice + agent's ElevenLabs voice
-- **Shot 7:** You on camera with your voice (builds trust, shows the builder)
+Audio plan:
+- Shots 1, 7: Your real voice on camera
+- Shots 2, 3, 5, 6: Voiceover recorded separately
+- Shot 4: Live interaction — your voice + agent voice
 
-### How to record the "live" voice interaction (Shot 4):
-The voice agent is slow (15-20 seconds of digging). For the video:
-1. Start the voice session
-2. Ask about Tiffany
-3. Record the full interaction
-4. In editing, speed up the digging progress (2x speed)
-5. Keep the agent's narration at normal speed
-6. Cut to the results appearing
+Editing the research (shot 4):
+1. Record full interaction
+2. Speed up digging progress to 2x
+3. Keep agent narration at 1x
+4. Cut to cards appearing
 
-### Editing approach:
-- Use ScreenFlow, OBS, or QuickTime for screen recording
-- Use your phone for the real-world shots
-- Use CapCut or iMovie to edit
-- Add subtle background music (lo-fi, civic, not distracting)
-- Keep cuts tight — every second earns its place
+Short version (TikTok/Reels, 45-60s): Shots 1, 4 (trimmed), 5, 7.
 
-### Platform versions:
-| Platform | Length | What to cut |
-|----------|--------|------------|
-| **TikTok** | 45-60s | Shots 1, 4 (shortened), 5, 7. Skip problem/carousel. |
-| **Instagram Reels** | 45-60s | Same as TikTok |
-| **X/Twitter** | 75-90s | Full version |
-| **LinkedIn** | 75-90s | Full version + text post (already written in docs/social/) |
+---
 
-### Post copy for each platform:
-**X:** "I built an AI that pulls the receipts on every Wisconsin candidate. Firecrawl searches the web. ElevenLabs narrates. It even finds your polling place from the state election site. Built in 6 days for #ElevenHacks. @firecrawl @elevenlabs"
+## Post copy
 
-**TikTok/IG:** "This AI researches candidates and finds your polling place in real time 🗳️ #ElevenHacks #CivicTech #Wisconsin2026 #AI"
+**X:** "Wisconsin votes in 12 days. Eleven people running for governor. A Supreme Court seat that flips the whole court. Three amendments nobody can explain. So I built an AI that pulls actual voting records, actual donors, and actual fact checks from 44 sources — and finds your polling place off the state election site, live. 6 days. #ElevenHacks @firecrawl @elevenlabs"
+
+**TikTok/IG:** "9 races on my ballot. Couldn't name a single judge. Built an AI that does the homework. #ElevenHacks #Wisconsin2026"
+
+**LinkedIn:** "Wisconsin votes April 7th. Nine races on my ballot. Supreme Court, circuit court judges, county supervisor. I couldn't name half the candidates. November is worse — eleven people running for governor, three constitutional amendments, and a state senate map that's competitive for the first time in 15 years. So I spent six days building Ballot Badger for the ElevenHacks hackathon. You talk to it. It searches 44 sources — Congress.gov, OpenSecrets, PolitiFact, Wisconsin news — finds your polling place by navigating the state election site in real time, and shows what's on your actual ballot. ElevenLabs handles the voice. Firecrawl handles the web scraping and live browser automation. Every finding cites its source. No pre-loaded database. Everything is live."
